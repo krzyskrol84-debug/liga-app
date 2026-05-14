@@ -1,7 +1,7 @@
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
-import { backendConfig, getRiotApiKeyDebugInfo } from "./config.js";
+import { backendConfig, getDatabaseUrlDebugInfo, getRiotApiKeyDebugInfo } from "./config.js";
 import { prisma } from "./lib/prisma.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { rateLimitMiddleware } from "./middleware/rateLimit.js";
@@ -47,6 +47,7 @@ app.use("/api/diagnostics", diagnosticsRouter);
 
 app.use(errorHandler);
 
+const databaseUrlDebug = getDatabaseUrlDebugInfo(process.env.DATABASE_URL);
 const server = app.listen(backendConfig.port, () => {
   const riotApiKeyDebug = getRiotApiKeyDebugInfo(backendConfig.riotApiKey);
   console.info("[backend] Environment loaded.", {
@@ -54,6 +55,7 @@ const server = app.listen(backendConfig.port, () => {
     riotApiKeyLoaded: riotApiKeyDebug.loaded,
     keyPrefix: riotApiKeyDebug.prefix,
     keySuffix: riotApiKeyDebug.suffix,
+    databaseUrlLoaded: databaseUrlDebug.loaded,
     note: "Changing backend/.env requires a backend restart.",
     corsOrigins: backendConfig.corsOrigins,
   });

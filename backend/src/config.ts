@@ -36,6 +36,7 @@ if (!parsedEnv.success) {
 export const backendConfig = {
   port: parsedEnv.data.PORT,
   riotApiKey: parsedEnv.data.RIOT_API_KEY,
+  databaseUrlLoaded: typeof process.env.DATABASE_URL === "string" && process.env.DATABASE_URL.trim().length > 0,
   corsOrigins: parsedEnv.data.CORS_ORIGINS.split(",").map((value) => value.trim()).filter(Boolean),
   enableScheduler: parsedEnv.data.ENABLE_SCHEDULER,
   statsUpdateIntervalHours: parsedEnv.data.STATS_UPDATE_INTERVAL_HOURS,
@@ -51,5 +52,13 @@ export function getRiotApiKeyDebugInfo(apiKey: string) {
     loaded: trimmed.length > 0,
     prefix: trimmed.slice(0, 8),
     suffix: trimmed.slice(-4),
+  } as const;
+}
+
+export function getDatabaseUrlDebugInfo(databaseUrl: string | undefined) {
+  const trimmed = (databaseUrl ?? "").trim();
+
+  return {
+    loaded: trimmed.length > 0,
   } as const;
 }
