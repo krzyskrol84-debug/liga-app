@@ -133,6 +133,52 @@ model MatchRecord {
   @@index([patch, championId, role])
 }
 
+model RiotMatchFetchQueue {
+  id             String    @id @default(cuid())
+  riotMatchId    String    @unique
+  puuid          String
+  platformRegion String?
+  routingRegion  String
+  priority       Int       @default(50)
+  status         String    @default("pending")
+  attempts       Int       @default(0)
+  lastError      String?
+  lockedAt       DateTime?
+  nextAttemptAt  DateTime  @default(now())
+  fetchedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, priority, nextAttemptAt])
+  @@index([puuid, status])
+  @@index([routingRegion, status])
+  @@index([updatedAt])
+}
+
+model AnalyticsJobState {
+  id                       String    @id
+  status                   String
+  currentStage             String
+  currentJob               String?
+  progress                 Int       @default(0)
+  processedMatches          Int       @default(0)
+  recommendationStatsAdded  Int       @default(0)
+  itemStatsAdded            Int       @default(0)
+  matchupStatsAdded         Int       @default(0)
+  currentChampion           String?
+  currentRole               String?
+  errorMessage              String?
+  metadata                  String?
+  startedAt                 DateTime?
+  finishedAt                DateTime?
+  lastStatsUpdatedAt        DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@index([status, currentStage])
+  @@index([updatedAt])
+}
+
 model TrackedAccount {
   id             String   @id @default(cuid())
   gameName       String
@@ -140,12 +186,14 @@ model TrackedAccount {
   puuid          String   @unique
   platformRegion String
   routingRegion  String
+  rankedTier     String?
   lastFetchedAt  DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   @@unique([gameName, tagLine, platformRegion, routingRegion])
   @@index([platformRegion, routingRegion])
+  @@index([rankedTier])
   @@index([lastFetchedAt])
 }
 

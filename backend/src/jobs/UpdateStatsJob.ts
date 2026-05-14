@@ -3,10 +3,13 @@ import { matchAnalyzer } from "../analytics/MatchAnalyzer.js";
 import { assertNoRunningJob } from "../lib/jobGuards.js";
 import { FetchMatchesJob, type TrackedAccountLike } from "./FetchMatchesJob.js";
 import { RiotApiError } from "../riot/RiotApiClient.js";
+import { backendConfig } from "../config.js";
+import { markAnalyticsJobFailed, setAnalyticsJobState } from "../lib/analyticsJobState.js";
 
-const ACCOUNT_COOLDOWN_MS = 90_000;
 const JOB_COOLDOWN_MS = 60_000;
 const BETWEEN_ACCOUNTS_DELAY_MS = 750;
+const PROGRESS_SAVE_INTERVAL = 50;
+const MATCH_LIST_WORKERS = 2;
 const RETRYABLE_ACCOUNT_ERROR_STATUSES = new Set([429, 500, 502, 503, 504]);
 
 export class UpdateStatsCooldownError extends Error {
@@ -22,6 +25,7 @@ export class UpdateStatsCooldownError extends Error {
 export type UpdateStatsJobInput = {
   count?: number;
   bypassCooldown?: boolean;
+  analyzeAfterFetch?: boolean;
 };
 
 export type UpdateStatsJobResult = {
@@ -50,6 +54,26 @@ export class UpdateStatsJob {
 
     const startedAt = new Date();
     const requestedCount = normalizeRequestedCount(input.count);
+    const analyzeAfterFetch = input.analyzeAfterFetch ?? true;
+    await setAnalyticsJobState({
+      status: "running",
+      currentStage: "fetching-matches",
+      currentJob: "update-stats",
+      progress: 0,
+      processedMatches: 0,
+      recommendationStatsAdded: 0,
+      itemStatsAdded: 0,
+      matchupStatsAdded: 0,
+      currentChampion: null,
+      currentRole: null,
+      errorMessage: null,
+      startedAt,
+      finishedAt: null,
+      metadata: {
+        requestedCount,
+        bypassCooldown: Boolean(input.bypassCooldown),
+      },
+    });
     const jobLog = await prisma.fetchJobLog.create({
       data: {
         jobName: "update-stats",
@@ -64,73 +88,121 @@ export class UpdateStatsJob {
     });
 
     try {
-      const trackedAccounts = await prisma.trackedAccount.findMany({
+      const trackedAccounts = (await prisma.trackedAccount.findMany({
         orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      });
+      })).sort(compareTrackedAccountPriority);
 
       let accountsProcessed = 0;
+      let accountsVisited = 0;
       let fetchedMatches = 0;
       let skippedMatches = 0;
       let failedAccounts = 0;
       let retryScheduledAccounts = 0;
+      let accountIndex = 0;
 
-      for (const trackedAccount of trackedAccounts) {
-        if (shouldSkipAccount(trackedAccount.lastFetchedAt)) {
-          continue;
-        }
+      const processNextAccount = async () => {
+        while (accountIndex < trackedAccounts.length) {
+          const trackedAccount = trackedAccounts[accountIndex];
+          accountIndex += 1;
 
-        let result: Awaited<ReturnType<FetchMatchesJob["fetchAndStoreMatchesForAccount"]>>;
-        try {
-          result = await this.fetchMatchesJob.fetchAndStoreMatchesForAccount(
-            trackedAccount as TrackedAccountLike,
-            requestedCount,
-          );
-        } catch (error) {
-          failedAccounts += 1;
-          if (isRetryableRiotError(error)) {
-            retryScheduledAccounts += 1;
+          if (!trackedAccount) {
+            continue;
           }
 
-          await prisma.fetchJobLog.create({
+          accountsVisited += 1;
+          if (shouldSkipAccount(trackedAccount.lastFetchedAt)) {
+            continue;
+          }
+
+          let result: Awaited<ReturnType<FetchMatchesJob["fetchAndStoreMatchesForAccount"]>>;
+          try {
+            result = await this.fetchMatchesJob.fetchAndStoreMatchesForAccount(
+              trackedAccount as TrackedAccountLike,
+              requestedCount,
+            );
+          } catch (error) {
+            failedAccounts += 1;
+            if (isRetryableRiotError(error)) {
+              retryScheduledAccounts += 1;
+            }
+
+            await prisma.fetchJobLog.create({
+              data: {
+                jobName: "update-stats.account",
+                status: isRetryableRiotError(error) ? "retrying" : "failed",
+                target: `${trackedAccount.gameName}#${trackedAccount.tagLine}`,
+                startedAt: new Date(),
+                finishedAt: new Date(),
+                errorMessage: getSafeErrorMessage(error),
+                metadata: JSON.stringify({
+                  puuid: trackedAccount.puuid,
+                  platformRegion: trackedAccount.platformRegion,
+                  routingRegion: trackedAccount.routingRegion,
+                  statusCode: error instanceof RiotApiError ? error.status : null,
+                  retryScheduled: isRetryableRiotError(error),
+                  retryReason: "next update-stats run",
+                }),
+              },
+            });
+
+            await sleep(BETWEEN_ACCOUNTS_DELAY_MS);
+            continue;
+          }
+
+          accountsProcessed += 1;
+          fetchedMatches += result.savedMatches;
+          skippedMatches += result.skippedExisting;
+
+          await prisma.trackedAccount.update({
+            where: {
+              id: trackedAccount.id,
+            },
             data: {
-              jobName: "update-stats.account",
-              status: isRetryableRiotError(error) ? "retrying" : "failed",
-              target: `${trackedAccount.gameName}#${trackedAccount.tagLine}`,
-              startedAt: new Date(),
-              finishedAt: new Date(),
-              errorMessage: getSafeErrorMessage(error),
-              metadata: JSON.stringify({
-                puuid: trackedAccount.puuid,
-                platformRegion: trackedAccount.platformRegion,
-                routingRegion: trackedAccount.routingRegion,
-                statusCode: error instanceof RiotApiError ? error.status : null,
-                retryScheduled: isRetryableRiotError(error),
-                retryReason: "next update-stats run",
-              }),
+              lastFetchedAt: new Date(),
             },
           });
 
           await sleep(BETWEEN_ACCOUNTS_DELAY_MS);
-          continue;
+
+          if (accountsVisited % PROGRESS_SAVE_INTERVAL === 0) {
+            await saveUpdateStatsProgress({
+              jobLogId: jobLog.id,
+              startedAt,
+              accountsVisited,
+              totalAccounts: trackedAccounts.length,
+              accountsProcessed,
+              fetchedMatches,
+              skippedMatches,
+              failedAccounts,
+              retryScheduledAccounts,
+            });
+          }
         }
+      };
 
-        accountsProcessed += 1;
-        fetchedMatches += result.savedMatches;
-        skippedMatches += result.skippedExisting;
+      await Promise.all(Array.from({ length: MATCH_LIST_WORKERS }, () => processNextAccount()));
 
-        await prisma.trackedAccount.update({
-          where: {
-            id: trackedAccount.id,
-          },
-          data: {
-            lastFetchedAt: new Date(),
-          },
-        });
+      await saveUpdateStatsProgress({
+        jobLogId: jobLog.id,
+        startedAt,
+        accountsVisited,
+        totalAccounts: trackedAccounts.length,
+        accountsProcessed,
+        fetchedMatches,
+        skippedMatches,
+        failedAccounts,
+        retryScheduledAccounts,
+      });
 
-        await sleep(BETWEEN_ACCOUNTS_DELAY_MS);
-      }
-
-      const globalAnalysis = await matchAnalyzer.analyzeGlobalStats();
+      const globalAnalysis = analyzeAfterFetch
+        ? await matchAnalyzer.analyzeGlobalStats()
+        : {
+            ok: true as const,
+            matchesAnalyzed: 0,
+            recommendationStatsCount: 0,
+            itemStatsCount: 0,
+            matchupStatsCount: 0,
+          };
 
       const finishedAt = new Date();
       await prisma.fetchJobLog.update({
@@ -169,6 +241,12 @@ export class UpdateStatsJob {
       };
     } catch (error) {
       const finishedAt = new Date();
+      await markAnalyticsJobFailed(error, {
+        currentJob: "update-stats",
+        metadata: {
+          stage: "fetching-matches",
+        },
+      });
       await prisma.fetchJobLog.update({
         where: {
           id: jobLog.id,
@@ -224,7 +302,7 @@ function shouldSkipAccount(lastFetchedAt: Date | null): boolean {
     return false;
   }
 
-  return Date.now() - lastFetchedAt.getTime() < ACCOUNT_COOLDOWN_MS;
+  return Date.now() - lastFetchedAt.getTime() < backendConfig.trackedAccountCooldownMinutes * 60_000;
 }
 
 function normalizeRequestedCount(count: number | undefined) {
@@ -254,3 +332,91 @@ function getSafeErrorMessage(error: unknown): string {
 }
 
 export const updateStatsJob = new UpdateStatsJob();
+
+async function saveUpdateStatsProgress(options: {
+  jobLogId: string;
+  startedAt: Date;
+  accountsVisited: number;
+  totalAccounts: number;
+  accountsProcessed: number;
+  fetchedMatches: number;
+  skippedMatches: number;
+  failedAccounts: number;
+  retryScheduledAccounts: number;
+}) {
+  await prisma.fetchJobLog.update({
+    where: {
+      id: options.jobLogId,
+    },
+    data: {
+      durationMs: Date.now() - options.startedAt.getTime(),
+      recordsRead: options.accountsVisited,
+      recordsSaved: options.fetchedMatches,
+      metadata: JSON.stringify({
+        stage: "fetch-new-matches",
+        progress: calculateProgress(options.accountsVisited, options.totalAccounts),
+        processedMatches: options.fetchedMatches,
+        accountsVisited: options.accountsVisited,
+        totalAccounts: options.totalAccounts,
+        accountsProcessed: options.accountsProcessed,
+        fetchedMatches: options.fetchedMatches,
+        skippedMatches: options.skippedMatches,
+        failedAccounts: options.failedAccounts,
+        retryScheduledAccounts: options.retryScheduledAccounts,
+      }),
+    },
+  });
+
+  await setAnalyticsJobState({
+    status: "running",
+    currentStage: "fetching-matches",
+    currentJob: "update-stats",
+    progress: calculateProgress(options.accountsVisited, options.totalAccounts),
+    processedMatches: options.fetchedMatches,
+    metadata: {
+      accountsVisited: options.accountsVisited,
+      totalAccounts: options.totalAccounts,
+      accountsProcessed: options.accountsProcessed,
+      fetchedMatches: options.fetchedMatches,
+      skippedMatches: options.skippedMatches,
+      failedAccounts: options.failedAccounts,
+      retryScheduledAccounts: options.retryScheduledAccounts,
+    },
+  });
+}
+
+function calculateProgress(processed: number, total: number) {
+  if (total <= 0) {
+    return 0;
+  }
+
+  return Math.min(99, Math.max(0, Math.floor((processed / total) * 100)));
+}
+
+function compareTrackedAccountPriority(
+  left: { rankedTier: string | null; updatedAt: Date },
+  right: { rankedTier: string | null; updatedAt: Date },
+) {
+  const tierDelta = rankedTierPriority(left.rankedTier) - rankedTierPriority(right.rankedTier);
+  if (tierDelta !== 0) {
+    return tierDelta;
+  }
+
+  return right.updatedAt.getTime() - left.updatedAt.getTime();
+}
+
+function rankedTierPriority(tier: string | null) {
+  switch ((tier ?? "").toUpperCase()) {
+    case "CHALLENGER":
+      return 0;
+    case "GRANDMASTER":
+      return 10;
+    case "MASTER":
+      return 20;
+    case "DIAMOND":
+    case "DIAMOND_PLUS":
+      return 30;
+    default:
+      return 50;
+  }
+}

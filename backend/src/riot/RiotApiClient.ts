@@ -150,17 +150,20 @@ export class RiotApiError extends Error {
 }
 
 export class RiotApiClient {
-  private static readonly maxConcurrentRequests = 4;
-  private static readonly maxRequestsPerSecond = 15;
-  private static readonly maxRequestsPerTwoMinutes = 90;
+  private static readonly configuredMaxConcurrentRequests = backendConfig.riotConcurrency;
+  private static readonly maxRequestsPerSecond = backendConfig.riotMaxRequestsPerSecond;
+  private static readonly maxRequestsPerTwoMinutes = backendConfig.riotMaxRequestsPerTwoMinutes;
   private static readonly oneSecondWindowMs = 1_000;
   private static readonly twoMinuteWindowMs = 120_000;
   private static activeRequests = 0;
+  private static currentConcurrentRequests = backendConfig.riotConcurrency;
   private static queue: QueuedRequest[] = [];
   private static requestTimestamps: number[] = [];
   private static processing = false;
   private static timer: ReturnType<typeof setTimeout> | null = null;
   private static retriesCount = 0;
+  private static rateLimitWaitUntil = 0;
+  private static lastConcurrencyIncreaseAt = Date.now();
   private readonly apiKey: string;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
@@ -377,6 +380,7 @@ export class RiotApiClient {
           const retryAfterMs = getRetryAfterMs(response.headers.get("Retry-After"));
           const delayMs = retryAfterMs ?? getExponentialBackoffMs(attempt);
           RiotApiClient.retriesCount += 1;
+          RiotApiClient.applyRateLimitBackoff(delayMs);
           logWarn("[riot] rate limit wait", {
             status: response.status,
             attempt,
@@ -390,6 +394,7 @@ export class RiotApiClient {
             queueSize: RiotApiClient.queue.length,
             requestsPerSecond: RiotApiClient.getRequestsInLastSecond(),
             retriesCount: RiotApiClient.retriesCount,
+            currentConcurrency: RiotApiClient.currentConcurrentRequests,
           });
           await this.writeFetchJobLog("retrying", context, {
             statusCode: response.status,
@@ -417,6 +422,7 @@ export class RiotApiClient {
             queueSize: RiotApiClient.queue.length,
             requestsPerSecond: RiotApiClient.getRequestsInLastSecond(),
             retriesCount: RiotApiClient.retriesCount,
+            currentConcurrency: RiotApiClient.currentConcurrentRequests,
           });
           await this.writeFetchJobLog("retrying", context, {
             statusCode: response.status,
@@ -474,6 +480,7 @@ export class RiotApiClient {
             queueSize: RiotApiClient.queue.length,
             requestsPerSecond: RiotApiClient.getRequestsInLastSecond(),
             retriesCount: RiotApiClient.retriesCount,
+            currentConcurrency: RiotApiClient.currentConcurrentRequests,
           });
           await this.writeFetchJobLog("retrying", context, {
             attempt,
@@ -538,6 +545,7 @@ export class RiotApiClient {
       queueSize: RiotApiClient.queue.length,
       requestsPerSecond: RiotApiClient.getRequestsInLastSecond(),
       retriesCount: RiotApiClient.retriesCount,
+      currentConcurrency: RiotApiClient.currentConcurrentRequests,
     });
   }
 
@@ -593,6 +601,23 @@ export class RiotApiClient {
     });
   }
 
+  static getMetrics() {
+    RiotApiClient.pruneTimestamps();
+    return {
+      queueSize: RiotApiClient.queue.length,
+      activeRequests: RiotApiClient.activeRequests,
+      currentConcurrency: RiotApiClient.currentConcurrentRequests,
+      configuredConcurrency: RiotApiClient.configuredMaxConcurrentRequests,
+      requestsPerSecond: RiotApiClient.getRequestsInLastSecond(),
+      requestsPerMinute: RiotApiClient.getRequestsInLastMinute(),
+      requestsPerTwoMinutes: RiotApiClient.getRequestsInLastTwoMinutes(),
+      maxRequestsPerSecond: RiotApiClient.maxRequestsPerSecond,
+      maxRequestsPerTwoMinutes: RiotApiClient.maxRequestsPerTwoMinutes,
+      retryCount: RiotApiClient.retriesCount,
+      rateLimitWaitMs: Math.max(0, RiotApiClient.rateLimitWaitUntil - Date.now()),
+    };
+  }
+
   private static scheduleProcessing(delayMs = 0) {
     if (RiotApiClient.timer) {
       clearTimeout(RiotApiClient.timer);
@@ -614,10 +639,11 @@ export class RiotApiClient {
 
     try {
       RiotApiClient.pruneTimestamps();
+      RiotApiClient.maybeIncreaseConcurrency();
 
       while (
         RiotApiClient.queue.length > 0 &&
-        RiotApiClient.activeRequests < RiotApiClient.maxConcurrentRequests &&
+        RiotApiClient.activeRequests < RiotApiClient.currentConcurrentRequests &&
         RiotApiClient.canDispatchNow()
       ) {
         const next = RiotApiClient.queue.shift();
@@ -634,6 +660,7 @@ export class RiotApiClient {
           requestsPerSecond: RiotApiClient.getRequestsInLastSecond(),
           retriesCount: RiotApiClient.retriesCount,
           activeRequests: RiotApiClient.activeRequests,
+          currentConcurrency: RiotApiClient.currentConcurrentRequests,
         });
 
         void next.task()
@@ -656,6 +683,7 @@ export class RiotApiClient {
   private static canDispatchNow() {
     RiotApiClient.pruneTimestamps();
     return (
+      Date.now() >= RiotApiClient.rateLimitWaitUntil &&
       RiotApiClient.getRequestsInLastSecond() < RiotApiClient.maxRequestsPerSecond &&
       RiotApiClient.getRequestsInLastTwoMinutes() < RiotApiClient.maxRequestsPerTwoMinutes
     );
@@ -677,7 +705,9 @@ export class RiotApiClient {
         ? Math.max(1, RiotApiClient.twoMinuteWindowMs - (now - twoMinuteRequests[0]!))
         : 0;
 
-    return Math.max(oneSecondDelay, twoMinuteDelay, 25);
+    const rateLimitDelay = Math.max(0, RiotApiClient.rateLimitWaitUntil - now);
+
+    return Math.max(oneSecondDelay, twoMinuteDelay, rateLimitDelay, 25);
   }
 
   private static pruneTimestamps() {
@@ -692,9 +722,38 @@ export class RiotApiClient {
     return RiotApiClient.requestTimestamps.filter((timestamp) => now - timestamp < RiotApiClient.oneSecondWindowMs).length;
   }
 
+  private static getRequestsInLastMinute() {
+    const now = Date.now();
+    return RiotApiClient.requestTimestamps.filter((timestamp) => now - timestamp < 60_000).length;
+  }
+
   private static getRequestsInLastTwoMinutes() {
     const now = Date.now();
     return RiotApiClient.requestTimestamps.filter((timestamp) => now - timestamp < RiotApiClient.twoMinuteWindowMs).length;
+  }
+
+  private static applyRateLimitBackoff(delayMs: number) {
+    RiotApiClient.currentConcurrentRequests = Math.max(1, RiotApiClient.currentConcurrentRequests - 1);
+    RiotApiClient.rateLimitWaitUntil = Math.max(RiotApiClient.rateLimitWaitUntil, Date.now() + delayMs);
+    RiotApiClient.scheduleProcessing(delayMs);
+  }
+
+  private static maybeIncreaseConcurrency() {
+    const now = Date.now();
+    if (
+      RiotApiClient.currentConcurrentRequests >= RiotApiClient.configuredMaxConcurrentRequests ||
+      now < RiotApiClient.rateLimitWaitUntil ||
+      now - RiotApiClient.lastConcurrencyIncreaseAt < 60_000
+    ) {
+      return;
+    }
+
+    RiotApiClient.currentConcurrentRequests += 1;
+    RiotApiClient.lastConcurrencyIncreaseAt = now;
+    logDebug("Riot API adaptive concurrency increased.", {
+      currentConcurrency: RiotApiClient.currentConcurrentRequests,
+      configuredConcurrency: RiotApiClient.configuredMaxConcurrentRequests,
+    });
   }
 }
 

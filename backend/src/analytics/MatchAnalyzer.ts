@@ -1,3 +1,4 @@
+import { backendConfig } from "../config.js";
 import { prisma } from "../lib/prisma.js";
 import { clearAnalyticsCache } from "../lib/analyticsCache.js";
 import { assertNoRunningJob } from "../lib/jobGuards.js";
@@ -9,11 +10,11 @@ import {
   startAnalyzerJobStatus,
   updateAnalyzerJobStatus,
 } from "../lib/jobStatus.js";
+import { markAnalyticsJobFailed, setAnalyticsJobState } from "../lib/analyticsJobState.js";
 import { dataDragonService } from "../riot/DataDragonService.js";
 
-const RECORD_BATCH_SIZE = 200;
+const RECORD_CHUNK_SIZE = 750;
 const WRITE_BATCH_SIZE = 250;
-const PROGRESS_SAVE_INTERVAL = 25;
 
 type SupportedRole = "TOP" | "JUNGLE" | "MIDDLE" | "BOTTOM" | "UTILITY";
 type NormalizedRole = "top" | "jungle" | "middle" | "bottom" | "utility";
@@ -96,6 +97,25 @@ type ExtractedParticipant = {
   }>;
 };
 
+type MatchRecordForAnalysis = {
+  id: string;
+  riotMatchId: string;
+  puuid: string;
+  patch: string | null;
+  rawPayload: string;
+};
+
+type ChunkAnalysisResult = {
+  processedRecords: number;
+  recommendationAggregates: Map<string, RecommendationAggregate>;
+  itemAggregates: Map<string, ItemAggregate>;
+  matchupAggregates: Map<string, MatchupAggregate>;
+  currentChampionId: number | null;
+  currentRole: NormalizedRole | null;
+  currentSummoner: string | null;
+  currentMatchId: string | null;
+};
+
 export type AnalyzeMatchesResult = {
   ok: true;
   processedRecords: number;
@@ -130,6 +150,21 @@ export class MatchAnalyzer {
     await assertNoRunningJob("analyze-global-stats");
     const startedAt = new Date();
     startAnalyzerJobStatus("analyze-global-stats");
+    await setAnalyticsJobState({
+      status: "running",
+      currentStage: "analyzing-stats",
+      currentJob: "analyze-global-stats",
+      progress: 0,
+      processedMatches: 0,
+      recommendationStatsAdded: 0,
+      itemStatsAdded: 0,
+      matchupStatsAdded: 0,
+      currentChampion: null,
+      currentRole: null,
+      errorMessage: null,
+      startedAt,
+      finishedAt: null,
+    });
     const jobLog = await prisma.fetchJobLog.create({
       data: {
         jobName: "analyze-global-stats",
@@ -172,6 +207,21 @@ export class MatchAnalyzer {
         });
 
         clearAnalyticsCache();
+        await setAnalyticsJobState({
+          status: "completed",
+          currentStage: "completed",
+          currentJob: "analyze-global-stats",
+          progress: 100,
+          processedMatches: 0,
+          recommendationStatsAdded: 0,
+          itemStatsAdded: 0,
+          matchupStatsAdded: 0,
+          currentChampion: null,
+          currentRole: null,
+          errorMessage: null,
+          finishedAt: new Date(),
+          lastStatsUpdatedAt: new Date(),
+        });
         return {
           ok: true,
           matchesAnalyzed: 0,
@@ -181,17 +231,25 @@ export class MatchAnalyzer {
         };
       }
 
+      const analysisRecordWhere = getAnalysisRecordWhere(latestPatch);
       const totalRecords = await prisma.matchRecord.count({
-        where: {
-          patch: latestPatch,
-        },
+        where: analysisRecordWhere,
       });
       const championNameById = await getChampionNameMapping();
+      const analyzerConcurrency = backendConfig.analyzerConcurrency;
       const recommendationAggregates = new Map<string, RecommendationAggregate>();
       const itemAggregates = new Map<string, ItemAggregate>();
       const matchupAggregates = new Map<string, MatchupAggregate>();
       let processedRecords = 0;
       let cursorId: string | undefined;
+      const pendingChunkAnalyses: Array<Promise<ChunkAnalysisResult>> = [];
+
+      logInfo("[analyzer] starting parallel analysis", {
+        patch: latestPatch,
+        totalRecords,
+        chunkSize: RECORD_CHUNK_SIZE,
+        concurrency: analyzerConcurrency,
+      });
 
       await saveAnalyzerProgress({
         jobLogId: jobLog.id,
@@ -209,7 +267,8 @@ export class MatchAnalyzer {
 
       while (true) {
         const records = await prisma.matchRecord.findMany({
-          take: RECORD_BATCH_SIZE,
+          take: RECORD_CHUNK_SIZE,
+          where: analysisRecordWhere,
           ...(cursorId
             ? {
                 skip: 1,
@@ -221,60 +280,52 @@ export class MatchAnalyzer {
           orderBy: {
             id: "asc",
           },
+          select: {
+            id: true,
+            riotMatchId: true,
+            puuid: true,
+            patch: true,
+            rawPayload: true,
+          },
         });
 
         if (records.length === 0) {
           break;
         }
 
-        for (const record of records) {
-          const parsed = safeParseMatch(record.rawPayload);
-          const participants = parsed?.info?.participants ?? [];
-          const patch = record.patch ?? extractPatchFromVersion(parsed?.info?.gameVersion);
-
-          if (patch !== latestPatch || participants.length === 0) {
-            continue;
-          }
-
-          processedRecords += 1;
-
-          const extractedParticipants = participants
-            .map((participant) => extractParticipant(participant, patch))
-            .filter((participant): participant is ExtractedParticipant => participant !== null);
-
-          for (const participant of extractedParticipants) {
-            accumulateRecommendationStats(recommendationAggregates, participant);
-            accumulateItemStats(itemAggregates, participant);
-          }
-
-          accumulateMatchups(matchupAggregates, extractedParticipants);
-
-          if (processedRecords % PROGRESS_SAVE_INTERVAL === 0) {
-            const currentParticipant = extractedParticipants[0] ?? null;
-            await saveAnalyzerProgress({
-              jobLogId: jobLog.id,
-              startedAt,
-              processedRecords,
-              totalRecords,
-              recommendationStatsAdded: recommendationAggregates.size,
-              itemStatsAdded: itemAggregates.size,
-              matchupStatsAdded: matchupAggregates.size,
-              currentChampion: currentParticipant
-                ? championNameById.get(currentParticipant.championId) ?? `Champion ${currentParticipant.championId}`
-                : null,
-              currentRole: currentParticipant?.role ?? null,
-              currentSummoner: record.puuid,
-              currentMatchId: record.riotMatchId,
-            });
-            logInfo("[riot]", {
-              match: record.riotMatchId,
-              status: "processed",
-              currentSummoner: record.puuid,
-            });
-          }
-        }
+        pendingChunkAnalyses.push(Promise.resolve().then(() => analyzeRecordChunk(records, latestPatch)));
 
         cursorId = records.at(-1)?.id;
+
+        if (pendingChunkAnalyses.length >= analyzerConcurrency) {
+          const results = await Promise.all(pendingChunkAnalyses.splice(0, pendingChunkAnalyses.length));
+          processedRecords = await mergeChunkResultsAndSaveProgress({
+            results,
+            processedRecords,
+            totalRecords,
+            recommendationAggregates,
+            itemAggregates,
+            matchupAggregates,
+            championNameById,
+            jobLogId: jobLog.id,
+            startedAt,
+          });
+        }
+      }
+
+      if (pendingChunkAnalyses.length > 0) {
+        const results = await Promise.all(pendingChunkAnalyses.splice(0, pendingChunkAnalyses.length));
+        processedRecords = await mergeChunkResultsAndSaveProgress({
+          results,
+          processedRecords,
+          totalRecords,
+          recommendationAggregates,
+          itemAggregates,
+          matchupAggregates,
+          championNameById,
+          jobLogId: jobLog.id,
+          startedAt,
+        });
       }
 
       const source = "riot-api";
@@ -444,6 +495,24 @@ export class MatchAnalyzer {
       });
 
       clearAnalyticsCache();
+      await setAnalyticsJobState({
+        status: "completed",
+        currentStage: "completed",
+        currentJob: "analyze-global-stats",
+        progress: 100,
+        processedMatches: processedRecords,
+        recommendationStatsAdded: recommendationStatsRows.length,
+        itemStatsAdded: itemStatsRows.length,
+        matchupStatsAdded: matchupStatsRows.length,
+        currentChampion: null,
+        currentRole: null,
+        errorMessage: null,
+        finishedAt,
+        lastStatsUpdatedAt: finishedAt,
+        metadata: {
+          patches: [latestPatch],
+        },
+      });
 
       return {
         ok: true,
@@ -465,10 +534,133 @@ export class MatchAnalyzer {
           metadata: serializeAnalyzerJobStatus(failedStatus),
         },
       });
+      await markAnalyticsJobFailed(error, {
+        currentJob: "analyze-global-stats",
+      });
       clearAnalyticsCache();
       throw error;
     }
   }
+}
+
+async function mergeChunkResultsAndSaveProgress(options: {
+  results: ChunkAnalysisResult[];
+  processedRecords: number;
+  totalRecords: number;
+  recommendationAggregates: Map<string, RecommendationAggregate>;
+  itemAggregates: Map<string, ItemAggregate>;
+  matchupAggregates: Map<string, MatchupAggregate>;
+  championNameById: Map<number, string>;
+  jobLogId: string;
+  startedAt: Date;
+}) {
+  let processedRecords = options.processedRecords;
+
+  for (const result of options.results) {
+    mergeRecommendationAggregates(options.recommendationAggregates, result.recommendationAggregates);
+    mergeItemAggregates(options.itemAggregates, result.itemAggregates);
+    mergeMatchupAggregates(options.matchupAggregates, result.matchupAggregates);
+    processedRecords += result.processedRecords;
+
+    const currentChampion = result.currentChampionId
+      ? options.championNameById.get(result.currentChampionId) ?? `Champion ${result.currentChampionId}`
+      : null;
+
+    await saveAnalyzerProgress({
+      jobLogId: options.jobLogId,
+      startedAt: options.startedAt,
+      processedRecords,
+      totalRecords: options.totalRecords,
+      recommendationStatsAdded: options.recommendationAggregates.size,
+      itemStatsAdded: options.itemAggregates.size,
+      matchupStatsAdded: options.matchupAggregates.size,
+      currentChampion,
+      currentRole: result.currentRole,
+      currentSummoner: result.currentSummoner,
+      currentMatchId: result.currentMatchId,
+    });
+
+    if (result.currentMatchId) {
+      logInfo("[riot]", {
+        match: result.currentMatchId,
+        status: "processed",
+        currentSummoner: result.currentSummoner,
+      });
+    }
+  }
+
+  return processedRecords;
+}
+
+function analyzeRecordChunk(
+  records: MatchRecordForAnalysis[],
+  latestPatch: string,
+): ChunkAnalysisResult {
+  const recommendationAggregates = new Map<string, RecommendationAggregate>();
+  const itemAggregates = new Map<string, ItemAggregate>();
+  const matchupAggregates = new Map<string, MatchupAggregate>();
+  let processedRecords = 0;
+  let currentChampionId: number | null = null;
+  let currentRole: NormalizedRole | null = null;
+  let currentSummoner: string | null = null;
+  let currentMatchId: string | null = null;
+
+  for (const record of records) {
+    const parsed = safeParseMatch(record.rawPayload);
+    const participants = parsed?.info?.participants ?? [];
+    const patch = record.patch ?? extractPatchFromVersion(parsed?.info?.gameVersion);
+
+    if (patch !== latestPatch || participants.length === 0) {
+      continue;
+    }
+
+    const extractedParticipants = participants
+      .map((participant) => extractParticipant(participant, patch))
+      .filter((participant): participant is ExtractedParticipant => participant !== null);
+
+    if (extractedParticipants.length === 0) {
+      continue;
+    }
+
+    processedRecords += 1;
+
+    for (const participant of extractedParticipants) {
+      accumulateRecommendationStats(recommendationAggregates, participant);
+      accumulateItemStats(itemAggregates, participant);
+    }
+
+    accumulateMatchups(matchupAggregates, extractedParticipants);
+
+    const currentParticipant = extractedParticipants[0];
+    currentChampionId = currentParticipant.championId;
+    currentRole = currentParticipant.role;
+    currentSummoner = record.puuid;
+    currentMatchId = record.riotMatchId;
+  }
+
+  return {
+    processedRecords,
+    recommendationAggregates,
+    itemAggregates,
+    matchupAggregates,
+    currentChampionId,
+    currentRole,
+    currentSummoner,
+    currentMatchId,
+  };
+}
+
+function getAnalysisRecordWhere(latestPatch: string) {
+  return {
+    OR: [
+      {
+        patch: latestPatch,
+      },
+      {
+        patch: null,
+      },
+    ],
+  };
 }
 
 function safeParseMatch(rawPayload: string): RiotStoredMatchPayload | null {
@@ -619,15 +811,15 @@ function accumulateRecommendationStats(
   aggregates: Map<string, RecommendationAggregate>,
   participant: ExtractedParticipant,
 ) {
-  const key = [
-    participant.patch,
-    participant.championId,
-    participant.role,
-    participant.primaryStyleId,
-    participant.subStyleId,
-    participant.selectedPerkIds.join("-"),
-    participant.summonerSpellIds.join("-"),
-  ].join(":");
+  const key = buildRecommendationAggregateKey({
+    patch: participant.patch,
+    championId: participant.championId,
+    role: participant.role,
+    primaryStyleId: participant.primaryStyleId,
+    subStyleId: participant.subStyleId,
+    selectedPerkIds: participant.selectedPerkIds,
+    summonerSpellIds: participant.summonerSpellIds,
+  });
 
   const current = aggregates.get(key) ?? {
     patch: participant.patch,
@@ -654,13 +846,13 @@ function accumulateItemStats(
   participant: ExtractedParticipant,
 ) {
   for (const itemSet of participant.itemSets) {
-    const key = [
-      participant.patch,
-      participant.championId,
-      participant.role,
-      itemSet.itemSetType,
-      itemSet.itemIds.join("-"),
-    ].join(":");
+    const key = buildItemAggregateKey({
+      patch: participant.patch,
+      championId: participant.championId,
+      role: participant.role,
+      itemSetType: itemSet.itemSetType,
+      itemIds: itemSet.itemIds,
+    });
 
     const current = aggregates.get(key) ?? {
       patch: participant.patch,
@@ -709,12 +901,12 @@ function accumulateMatchups(
         continue;
       }
 
-      const key = [
-        participant.patch,
-        participant.championId,
-        opponent.championId,
+      const key = buildMatchupAggregateKey({
+        patch: participant.patch,
+        championId: participant.championId,
+        opponentChampionId: opponent.championId,
         role,
-      ].join(":");
+      });
 
       const current = aggregates.get(key) ?? {
         patch: participant.patch,
@@ -733,6 +925,114 @@ function accumulateMatchups(
       aggregates.set(key, current);
     }
   }
+}
+
+function mergeRecommendationAggregates(
+  target: Map<string, RecommendationAggregate>,
+  source: Map<string, RecommendationAggregate>,
+) {
+  for (const entry of source.values()) {
+    const key = buildRecommendationAggregateKey(entry);
+    const current = target.get(key);
+
+    if (!current) {
+      target.set(key, {
+        ...entry,
+        selectedPerkIds: [...entry.selectedPerkIds],
+        summonerSpellIds: [...entry.summonerSpellIds] as [number, number],
+      });
+      continue;
+    }
+
+    current.gamesCount += entry.gamesCount;
+    current.wins += entry.wins;
+  }
+}
+
+function mergeItemAggregates(
+  target: Map<string, ItemAggregate>,
+  source: Map<string, ItemAggregate>,
+) {
+  for (const entry of source.values()) {
+    const key = buildItemAggregateKey(entry);
+    const current = target.get(key);
+
+    if (!current) {
+      target.set(key, { ...entry, itemIds: [...entry.itemIds] });
+      continue;
+    }
+
+    current.gamesCount += entry.gamesCount;
+    current.wins += entry.wins;
+  }
+}
+
+function mergeMatchupAggregates(
+  target: Map<string, MatchupAggregate>,
+  source: Map<string, MatchupAggregate>,
+) {
+  for (const entry of source.values()) {
+    const key = buildMatchupAggregateKey(entry);
+    const current = target.get(key);
+
+    if (!current) {
+      target.set(key, { ...entry });
+      continue;
+    }
+
+    current.gamesCount += entry.gamesCount;
+    current.wins += entry.wins;
+  }
+}
+
+function buildRecommendationAggregateKey(entry: {
+  patch: string;
+  championId: number;
+  role: NormalizedRole;
+  primaryStyleId: number;
+  subStyleId: number;
+  selectedPerkIds: number[];
+  summonerSpellIds: [number, number];
+}) {
+  return [
+    entry.patch,
+    entry.championId,
+    entry.role,
+    entry.primaryStyleId,
+    entry.subStyleId,
+    entry.selectedPerkIds.join("-"),
+    entry.summonerSpellIds.join("-"),
+  ].join(":");
+}
+
+function buildItemAggregateKey(entry: {
+  patch: string;
+  championId: number;
+  role: NormalizedRole;
+  itemSetType: ItemSetType;
+  itemIds: number[];
+}) {
+  return [
+    entry.patch,
+    entry.championId,
+    entry.role,
+    entry.itemSetType,
+    entry.itemIds.join("-"),
+  ].join(":");
+}
+
+function buildMatchupAggregateKey(entry: {
+  patch: string;
+  championId: number;
+  opponentChampionId: number;
+  role: NormalizedRole;
+}) {
+  return [
+    entry.patch,
+    entry.championId,
+    entry.opponentChampionId,
+    entry.role,
+  ].join(":");
 }
 
 function calculateWinRate(wins: number, gamesCount: number): number {
@@ -829,6 +1129,24 @@ async function saveAnalyzerProgress(options: {
         options.itemStatsAdded +
         options.matchupStatsAdded,
       metadata: serializeAnalyzerJobStatus(status),
+    },
+  });
+
+  await setAnalyticsJobState({
+    status: "running",
+    currentStage: "analyzing-stats",
+    currentJob: "analyze-global-stats",
+    progress,
+    processedMatches: options.processedRecords,
+    recommendationStatsAdded: options.recommendationStatsAdded,
+    itemStatsAdded: options.itemStatsAdded,
+    matchupStatsAdded: options.matchupStatsAdded,
+    currentChampion: options.currentChampion,
+    currentRole: options.currentRole,
+    metadata: {
+      currentSummoner: options.currentSummoner,
+      currentMatchId: options.currentMatchId,
+      totalRecords: options.totalRecords,
     },
   });
 }

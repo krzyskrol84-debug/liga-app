@@ -12,6 +12,7 @@ import { logWarn } from "../lib/logger.js";
 const BETWEEN_ENTRIES_DELAY_MS = 250;
 const DIAMOND_DIVISIONS = ["I", "II", "III", "IV"] as const;
 const MAX_DIAMOND_PAGES_PER_DIVISION = 10;
+const PROGRESS_SAVE_INTERVAL = 50;
 
 export type RankedQueue = "RANKED_SOLO_5x5";
 export type RankedSeedTier = "CHALLENGER" | "GRANDMASTER" | "MASTER" | "DIAMOND_PLUS";
@@ -65,8 +66,10 @@ export class SeedRankedAccountsJob {
       let addedAccounts = 0;
       let skippedDuplicates = 0;
       let failedAccounts = 0;
+      let processedEntries = 0;
 
       for (const entry of limitedEntries) {
+        processedEntries += 1;
         try {
           const puuid = await this.resolveEntryPuuid(entry, input.platformRegion);
 
@@ -77,6 +80,14 @@ export class SeedRankedAccountsJob {
           });
 
           if (existing) {
+            await prisma.trackedAccount.update({
+              where: {
+                puuid,
+              },
+              data: {
+                rankedTier: normalizeRankedTier(entry.tier),
+              },
+            });
             skippedDuplicates += 1;
             continue;
           }
@@ -93,6 +104,7 @@ export class SeedRankedAccountsJob {
               puuid: account.puuid,
               platformRegion: input.platformRegion,
               routingRegion: input.routingRegion,
+              rankedTier: normalizeRankedTier(entry.tier),
             },
           });
 
@@ -118,7 +130,29 @@ export class SeedRankedAccountsJob {
             },
           });
         }
+
+        if (processedEntries % PROGRESS_SAVE_INTERVAL === 0) {
+          await saveSeedProgress({
+            jobLogId: jobLog.id,
+            startedAt,
+            processedEntries,
+            totalEntries: limitedEntries.length,
+            addedAccounts,
+            skippedDuplicates,
+            failedAccounts,
+          });
+        }
       }
+
+      await saveSeedProgress({
+        jobLogId: jobLog.id,
+        startedAt,
+        processedEntries,
+        totalEntries: limitedEntries.length,
+        addedAccounts,
+        skippedDuplicates,
+        failedAccounts,
+      });
 
       const finishedAt = new Date();
       await prisma.fetchJobLog.update({
@@ -300,6 +334,11 @@ function tierRank(tier: string | undefined) {
   }
 }
 
+function normalizeRankedTier(tier: string | undefined) {
+  const normalized = (tier ?? "").toUpperCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
 async function logRankedSeedFailure(options: {
   tier: RankedSeedTier;
   queue: RankedQueue;
@@ -370,3 +409,42 @@ function getSafeErrorMessage(error: unknown): string {
 }
 
 export const seedRankedAccountsJob = new SeedRankedAccountsJob();
+
+async function saveSeedProgress(options: {
+  jobLogId: string;
+  startedAt: Date;
+  processedEntries: number;
+  totalEntries: number;
+  addedAccounts: number;
+  skippedDuplicates: number;
+  failedAccounts: number;
+}) {
+  await prisma.fetchJobLog.update({
+    where: {
+      id: options.jobLogId,
+    },
+    data: {
+      durationMs: Date.now() - options.startedAt.getTime(),
+      recordsRead: options.processedEntries,
+      recordsSaved: options.addedAccounts,
+      metadata: JSON.stringify({
+        stage: "resolve-high-elo-accounts",
+        progress: calculateProgress(options.processedEntries, options.totalEntries),
+        processedMatches: 0,
+        processedEntries: options.processedEntries,
+        totalEntries: options.totalEntries,
+        addedAccounts: options.addedAccounts,
+        skippedDuplicates: options.skippedDuplicates,
+        failedAccounts: options.failedAccounts,
+      }),
+    },
+  });
+}
+
+function calculateProgress(processed: number, total: number) {
+  if (total <= 0) {
+    return 0;
+  }
+
+  return Math.min(99, Math.max(0, Math.floor((processed / total) * 100)));
+}
