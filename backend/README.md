@@ -8,7 +8,7 @@ Node.js + TypeScript backend for the local Liga desktop app.
 - TypeScript
 - Express
 - Prisma
-- SQLite
+- PostgreSQL
 - Riot API
 - Data Dragon
 
@@ -27,13 +27,13 @@ npm.cmd install
 Copy-Item .env.example .env
 ```
 
-3. Fill in `RIOT_API_KEY` in `backend/.env`.
+3. Fill in `DATABASE_URL` and optionally `RIOT_API_KEY` in `backend/.env`.
 
 4. Generate Prisma client and run migrations:
 
 ```powershell
 npm.cmd run db:generate
-npm.cmd run db:migrate -- --name init
+npm.cmd run db:migrate
 ```
 
 ## Development
@@ -55,7 +55,7 @@ npm.cmd run start
 
 - `PORT` - backend port
 - `RIOT_API_KEY` - Riot API key
-- `DATABASE_URL` - Prisma SQLite database URL
+- `DATABASE_URL` - Prisma PostgreSQL database URL
 - `CORS_ORIGINS` - comma-separated allowed origins
 - `ENABLE_SCHEDULER` - `true` / `false`
 - `STATS_UPDATE_INTERVAL_HOURS` - scheduler interval
@@ -77,4 +77,3 @@ Returns:
 - CORS uses an allowlist from env
 - Prisma disconnects on graceful shutdown
 - rate limiting is enabled for the whole API surface
-

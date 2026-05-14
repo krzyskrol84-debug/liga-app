@@ -11,7 +11,8 @@ loadEnv({ path: envFilePath });
 
 const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(8787),
-  RIOT_API_KEY: z.string().min(1, "RIOT_API_KEY is required"),
+  RIOT_API_KEY: z.string().optional().default(""),
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).optional(),
   CORS_ORIGINS: z.string().optional().default("http://127.0.0.1:1420,http://localhost:1420,http://tauri.localhost"),
   ENABLE_SCHEDULER: z
     .string()
@@ -36,6 +37,7 @@ if (!parsedEnv.success) {
 export const backendConfig = {
   port: parsedEnv.data.PORT,
   riotApiKey: parsedEnv.data.RIOT_API_KEY,
+  logLevel: parsedEnv.data.LOG_LEVEL ?? (process.env.NODE_ENV === "production" ? "info" : "debug"),
   databaseUrlLoaded: typeof process.env.DATABASE_URL === "string" && process.env.DATABASE_URL.trim().length > 0,
   corsOrigins: parsedEnv.data.CORS_ORIGINS.split(",").map((value) => value.trim()).filter(Boolean),
   enableScheduler: parsedEnv.data.ENABLE_SCHEDULER,

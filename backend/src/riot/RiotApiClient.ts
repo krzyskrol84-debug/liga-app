@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import { backendConfig } from "../config.js";
+import { logDebug, logError, logWarn } from "../lib/logger.js";
 
 export type PlatformRegion =
   | "br1"
@@ -127,8 +128,12 @@ type RequestContext = {
   routingRegion?: RoutingRegion;
 };
 
-type LoggerLevel = "info" | "warn" | "error";
 type QueueTask<T> = () => Promise<T>;
+type QueuedRequest = {
+  task: QueueTask<unknown>;
+  resolve: (value: unknown) => void;
+  reject: (reason?: unknown) => void;
+};
 
 export class RiotApiError extends Error {
   public readonly status: number | null;
@@ -146,8 +151,16 @@ export class RiotApiError extends Error {
 
 export class RiotApiClient {
   private static readonly maxConcurrentRequests = 4;
+  private static readonly maxRequestsPerSecond = 15;
+  private static readonly maxRequestsPerTwoMinutes = 90;
+  private static readonly oneSecondWindowMs = 1_000;
+  private static readonly twoMinuteWindowMs = 120_000;
   private static activeRequests = 0;
-  private static queue: Array<() => void> = [];
+  private static queue: QueuedRequest[] = [];
+  private static requestTimestamps: number[] = [];
+  private static processing = false;
+  private static timer: ReturnType<typeof setTimeout> | null = null;
+  private static retriesCount = 0;
   private readonly apiKey: string;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
@@ -155,7 +168,7 @@ export class RiotApiClient {
   constructor(options: RiotApiClientOptions = {}) {
     this.apiKey = backendConfig.riotApiKey;
     this.timeoutMs = options.timeoutMs ?? 10_000;
-    this.maxRetries = options.maxRetries ?? 4;
+    this.maxRetries = options.maxRetries ?? 6;
   }
 
   async getAccountByRiotId(
@@ -349,8 +362,7 @@ export class RiotApiClient {
         );
 
         if (response.ok) {
-          this.log("info", {
-            message: "Riot API request succeeded.",
+          this.logSuccess({
             status: response.status,
             attempt,
             url,
@@ -364,12 +376,20 @@ export class RiotApiClient {
         if (response.status === 429 && attempt <= this.maxRetries) {
           const retryAfterMs = getRetryAfterMs(response.headers.get("Retry-After"));
           const delayMs = retryAfterMs ?? getExponentialBackoffMs(attempt);
-          this.log("warn", {
-            message: `Riot API rate limited the request. Retrying in ${delayMs}ms.`,
+          RiotApiClient.retriesCount += 1;
+          logWarn("[riot] rate limit wait", {
             status: response.status,
             attempt,
             url,
-            context,
+            method: context.method,
+            target: context.target,
+            platformRegion: context.platformRegion,
+            routingRegion: context.routingRegion,
+            rateLimitWaitMs: delayMs,
+            retryWaitMs: delayMs,
+            queueSize: RiotApiClient.queue.length,
+            requestsPerSecond: RiotApiClient.getRequestsInLastSecond(),
+            retriesCount: RiotApiClient.retriesCount,
           });
           await this.writeFetchJobLog("retrying", context, {
             statusCode: response.status,
@@ -384,12 +404,19 @@ export class RiotApiClient {
 
         if (RETRYABLE_STATUS_CODES.has(response.status) && attempt <= this.maxRetries) {
           const delayMs = getExponentialBackoffMs(attempt);
-          this.log("warn", {
-            message: `Riot API temporary error. Retrying in ${delayMs}ms.`,
+          RiotApiClient.retriesCount += 1;
+          logWarn("[riot] retry wait", {
             status: response.status,
             attempt,
             url,
-            context,
+            method: context.method,
+            target: context.target,
+            platformRegion: context.platformRegion,
+            routingRegion: context.routingRegion,
+            retryWaitMs: delayMs,
+            queueSize: RiotApiClient.queue.length,
+            requestsPerSecond: RiotApiClient.getRequestsInLastSecond(),
+            retriesCount: RiotApiClient.retriesCount,
           });
           await this.writeFetchJobLog("retrying", context, {
             statusCode: response.status,
@@ -415,12 +442,15 @@ export class RiotApiClient {
           errorMessage: error.message,
         });
 
-        this.log("error", {
-          message: error.message,
+        logError("Riot API request failed.", {
+          error: error.message,
           status: response.status,
           attempt,
           url,
-          context,
+          method: context.method,
+          target: context.target,
+          platformRegion: context.platformRegion,
+          routingRegion: context.routingRegion,
         });
 
         throw error;
@@ -431,11 +461,19 @@ export class RiotApiClient {
 
         if (attempt <= this.maxRetries) {
           const delayMs = getExponentialBackoffMs(attempt);
-          this.log("warn", {
-            message: `Riot API request error. Retrying in ${delayMs}ms: ${getSafeErrorMessage(error)}`,
+          RiotApiClient.retriesCount += 1;
+          logWarn("[riot] retry wait", {
+            error: getSafeErrorMessage(error),
             attempt,
             url,
-            context,
+            method: context.method,
+            target: context.target,
+            platformRegion: context.platformRegion,
+            routingRegion: context.routingRegion,
+            retryWaitMs: delayMs,
+            queueSize: RiotApiClient.queue.length,
+            requestsPerSecond: RiotApiClient.getRequestsInLastSecond(),
+            retriesCount: RiotApiClient.retriesCount,
           });
           await this.writeFetchJobLog("retrying", context, {
             attempt,
@@ -456,11 +494,14 @@ export class RiotApiClient {
           errorMessage: requestError.message,
         });
 
-        this.log("error", {
-          message: requestError.message,
+        logError("Riot API request exhausted retries and failed.", {
+          error: requestError.message,
           attempt,
           url,
-          context,
+          method: context.method,
+          target: context.target,
+          platformRegion: context.platformRegion,
+          routingRegion: context.routingRegion,
         });
 
         throw requestError;
@@ -480,19 +521,13 @@ export class RiotApiClient {
     throw exhaustedError;
   }
 
-  private log(
-    level: LoggerLevel,
-    payload: {
-      message: string;
-      status?: number;
-      attempt?: number;
-      url: string;
-      context: RequestContext;
-    },
-  ) {
-    const logger = level === "error" ? console.error : level === "warn" ? console.warn : console.info;
-    logger("[RiotApiClient]", {
-      message: payload.message,
+  private logSuccess(payload: {
+    status?: number;
+    attempt?: number;
+    url: string;
+    context: RequestContext;
+  }) {
+    logDebug("Riot API request succeeded.", {
       status: payload.status,
       attempt: payload.attempt,
       method: payload.context.method,
@@ -500,6 +535,9 @@ export class RiotApiClient {
       target: payload.context.target,
       platformRegion: payload.context.platformRegion,
       routingRegion: payload.context.routingRegion,
+      queueSize: RiotApiClient.queue.length,
+      requestsPerSecond: RiotApiClient.getRequestsInLastSecond(),
+      retriesCount: RiotApiClient.retriesCount,
     });
   }
 
@@ -536,7 +574,7 @@ export class RiotApiClient {
         },
       });
     } catch (error) {
-      console.warn("[RiotApiClient] Could not write FetchJobLog entry.", {
+      logWarn("Could not write FetchJobLog entry.", {
         jobName: context.jobName,
         target: context.target,
         reason: getSafeErrorMessage(error),
@@ -545,24 +583,122 @@ export class RiotApiClient {
   }
 
   private static async runQueued<T>(task: QueueTask<T>): Promise<T> {
-    if (RiotApiClient.activeRequests >= RiotApiClient.maxConcurrentRequests) {
-      await new Promise<void>((resolve) => {
-        RiotApiClient.queue.push(resolve);
+    return new Promise<T>((resolve, reject) => {
+      RiotApiClient.queue.push({
+        task: task as QueueTask<unknown>,
+        resolve: resolve as (value: unknown) => void,
+        reject,
       });
+      RiotApiClient.scheduleProcessing();
+    });
+  }
+
+  private static scheduleProcessing(delayMs = 0) {
+    if (RiotApiClient.timer) {
+      clearTimeout(RiotApiClient.timer);
+      RiotApiClient.timer = null;
     }
 
-    RiotApiClient.activeRequests += 1;
-    try {
-      return await task();
-    } finally {
-      RiotApiClient.activeRequests = Math.max(0, RiotApiClient.activeRequests - 1);
-      const next = RiotApiClient.queue.shift();
-      next?.();
+    RiotApiClient.timer = setTimeout(() => {
+      RiotApiClient.timer = null;
+      void RiotApiClient.processQueue();
+    }, delayMs);
+  }
+
+  private static async processQueue() {
+    if (RiotApiClient.processing) {
+      return;
     }
+
+    RiotApiClient.processing = true;
+
+    try {
+      RiotApiClient.pruneTimestamps();
+
+      while (
+        RiotApiClient.queue.length > 0 &&
+        RiotApiClient.activeRequests < RiotApiClient.maxConcurrentRequests &&
+        RiotApiClient.canDispatchNow()
+      ) {
+        const next = RiotApiClient.queue.shift();
+        if (!next) {
+          break;
+        }
+
+        const now = Date.now();
+        RiotApiClient.requestTimestamps.push(now);
+        RiotApiClient.activeRequests += 1;
+
+        logDebug("Riot API queue dispatch.", {
+          queueSize: RiotApiClient.queue.length,
+          requestsPerSecond: RiotApiClient.getRequestsInLastSecond(),
+          retriesCount: RiotApiClient.retriesCount,
+          activeRequests: RiotApiClient.activeRequests,
+        });
+
+        void next.task()
+          .then((value) => next.resolve(value))
+          .catch((error) => next.reject(error))
+          .finally(() => {
+            RiotApiClient.activeRequests = Math.max(0, RiotApiClient.activeRequests - 1);
+            RiotApiClient.scheduleProcessing();
+          });
+      }
+    } finally {
+      RiotApiClient.processing = false;
+    }
+
+    if (RiotApiClient.queue.length > 0) {
+      RiotApiClient.scheduleProcessing(RiotApiClient.getNextDispatchDelayMs());
+    }
+  }
+
+  private static canDispatchNow() {
+    RiotApiClient.pruneTimestamps();
+    return (
+      RiotApiClient.getRequestsInLastSecond() < RiotApiClient.maxRequestsPerSecond &&
+      RiotApiClient.getRequestsInLastTwoMinutes() < RiotApiClient.maxRequestsPerTwoMinutes
+    );
+  }
+
+  private static getNextDispatchDelayMs() {
+    RiotApiClient.pruneTimestamps();
+    const now = Date.now();
+    const oneSecondRequests = RiotApiClient.requestTimestamps.filter((timestamp) => now - timestamp < RiotApiClient.oneSecondWindowMs);
+    const twoMinuteRequests = RiotApiClient.requestTimestamps.filter((timestamp) => now - timestamp < RiotApiClient.twoMinuteWindowMs);
+
+    const oneSecondDelay =
+      oneSecondRequests.length >= RiotApiClient.maxRequestsPerSecond
+        ? Math.max(1, RiotApiClient.oneSecondWindowMs - (now - oneSecondRequests[0]!))
+        : 0;
+
+    const twoMinuteDelay =
+      twoMinuteRequests.length >= RiotApiClient.maxRequestsPerTwoMinutes
+        ? Math.max(1, RiotApiClient.twoMinuteWindowMs - (now - twoMinuteRequests[0]!))
+        : 0;
+
+    return Math.max(oneSecondDelay, twoMinuteDelay, 25);
+  }
+
+  private static pruneTimestamps() {
+    const now = Date.now();
+    RiotApiClient.requestTimestamps = RiotApiClient.requestTimestamps.filter(
+      (timestamp) => now - timestamp < RiotApiClient.twoMinuteWindowMs,
+    );
+  }
+
+  private static getRequestsInLastSecond() {
+    const now = Date.now();
+    return RiotApiClient.requestTimestamps.filter((timestamp) => now - timestamp < RiotApiClient.oneSecondWindowMs).length;
+  }
+
+  private static getRequestsInLastTwoMinutes() {
+    const now = Date.now();
+    return RiotApiClient.requestTimestamps.filter((timestamp) => now - timestamp < RiotApiClient.twoMinuteWindowMs).length;
   }
 }
 
-const RETRYABLE_STATUS_CODES = new Set([500, 502, 503]);
+const RETRYABLE_STATUS_CODES = new Set([500, 502, 503, 504]);
 
 function buildRoutingBaseUrl(region: RoutingRegion): string {
   return `https://${region}.api.riotgames.com`;

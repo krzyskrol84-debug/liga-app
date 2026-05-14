@@ -2,15 +2,19 @@ import { prisma } from "../lib/prisma.js";
 import { assertNoRunningJob } from "../lib/jobGuards.js";
 import {
   RiotApiClient,
+  RiotApiError,
   type LeagueEntryDto,
   type PlatformRegion,
   type RoutingRegion,
 } from "../riot/RiotApiClient.js";
+import { logWarn } from "../lib/logger.js";
 
 const BETWEEN_ENTRIES_DELAY_MS = 250;
+const DIAMOND_DIVISIONS = ["I", "II", "III", "IV"] as const;
+const MAX_DIAMOND_PAGES_PER_DIVISION = 10;
 
 export type RankedQueue = "RANKED_SOLO_5x5";
-export type RankedSeedTier = "CHALLENGER" | "GRANDMASTER" | "MASTER";
+export type RankedSeedTier = "CHALLENGER" | "GRANDMASTER" | "MASTER" | "DIAMOND_PLUS";
 
 export type SeedRankedAccountsJobInput = {
   platformRegion: PlatformRegion;
@@ -164,22 +168,35 @@ export class SeedRankedAccountsJob {
     const entries: LeagueEntryDto[] = [];
 
     for (const tier of input.tiers) {
-      switch (tier) {
-        case "CHALLENGER": {
-          const result = await this.riotApiClient.getChallengerLeague(input.queue, input.platformRegion);
-          entries.push(...(result.entries ?? []).map((entry) => ({ ...entry, tier: "CHALLENGER" })));
-          break;
+      try {
+        switch (tier) {
+          case "CHALLENGER": {
+            const result = await this.riotApiClient.getChallengerLeague(input.queue, input.platformRegion);
+            entries.push(...(result.entries ?? []).map((entry) => ({ ...entry, tier: "CHALLENGER" })));
+            break;
+          }
+          case "GRANDMASTER": {
+            const result = await this.riotApiClient.getGrandmasterLeague(input.queue, input.platformRegion);
+            entries.push(...(result.entries ?? []).map((entry) => ({ ...entry, tier: "GRANDMASTER" })));
+            break;
+          }
+          case "MASTER": {
+            const result = await this.riotApiClient.getMasterLeague(input.queue, input.platformRegion);
+            entries.push(...(result.entries ?? []).map((entry) => ({ ...entry, tier: "MASTER" })));
+            break;
+          }
+          case "DIAMOND_PLUS": {
+            await this.fetchDiamondPlusEntries(input, entries);
+            break;
+          }
         }
-        case "GRANDMASTER": {
-          const result = await this.riotApiClient.getGrandmasterLeague(input.queue, input.platformRegion);
-          entries.push(...(result.entries ?? []).map((entry) => ({ ...entry, tier: "GRANDMASTER" })));
-          break;
-        }
-        case "MASTER": {
-          const result = await this.riotApiClient.getMasterLeague(input.queue, input.platformRegion);
-          entries.push(...(result.entries ?? []).map((entry) => ({ ...entry, tier: "MASTER" })));
-          break;
-        }
+      } catch (error) {
+        await logRankedSeedFailure({
+          tier,
+          queue: input.queue,
+          platformRegion: input.platformRegion,
+          error,
+        });
       }
     }
 
@@ -196,6 +213,49 @@ export class SeedRankedAccountsJob {
     }
 
     return [...uniqueBySummonerId.values()].sort(compareLeagueEntries);
+  }
+
+  private async fetchDiamondPlusEntries(
+    input: SeedRankedAccountsJobInput,
+    entries: LeagueEntryDto[],
+  ) {
+    for (const division of DIAMOND_DIVISIONS) {
+      for (let page = 1; page <= MAX_DIAMOND_PAGES_PER_DIVISION; page += 1) {
+        try {
+          const result = await this.riotApiClient.getLeagueEntries(
+            input.queue,
+            "DIAMOND",
+            division,
+            input.platformRegion,
+            page,
+          );
+
+          if (result.length === 0) {
+            break;
+          }
+
+          entries.push(...result.map((entry) => ({ ...entry, tier: "DIAMOND" })));
+
+          if (entries.length >= input.limit * 2) {
+            break;
+          }
+        } catch (error) {
+          await logRankedSeedFailure({
+            tier: "DIAMOND_PLUS",
+            queue: input.queue,
+            platformRegion: input.platformRegion,
+            division,
+            page,
+            error,
+          });
+          break;
+        }
+      }
+
+      if (entries.length >= input.limit * 2) {
+        break;
+      }
+    }
   }
 
   private async resolveEntryPuuid(entry: LeagueEntryDto, platformRegion: PlatformRegion): Promise<string> {
@@ -233,9 +293,62 @@ function tierRank(tier: string | undefined) {
       return 1;
     case "MASTER":
       return 2;
+    case "DIAMOND":
+      return 3;
     default:
       return 99;
   }
+}
+
+async function logRankedSeedFailure(options: {
+  tier: RankedSeedTier;
+  queue: RankedQueue;
+  platformRegion: PlatformRegion;
+  division?: string;
+  page?: number;
+  error: unknown;
+}) {
+  const retryable = isRetryableRiotError(options.error);
+  logWarn("[riot] ranked seed source failed; continuing full refresh", {
+    tier: options.tier,
+    division: options.division ?? null,
+    page: options.page ?? null,
+    queue: options.queue,
+    platformRegion: options.platformRegion,
+    retryScheduled: retryable,
+    error: getSafeErrorMessage(options.error),
+  });
+
+  await prisma.fetchJobLog.create({
+    data: {
+      jobName: "seed-ranked-accounts.source",
+      status: retryable ? "retrying" : "failed",
+      target: `${options.platformRegion}:${options.tier}:${options.division ?? "top"}:${options.page ?? 1}`,
+      startedAt: new Date(),
+      finishedAt: new Date(),
+      errorMessage: getSafeErrorMessage(options.error),
+      metadata: JSON.stringify({
+        tier: options.tier,
+        division: options.division ?? null,
+        page: options.page ?? null,
+        queue: options.queue,
+        platformRegion: options.platformRegion,
+        statusCode: options.error instanceof RiotApiError ? options.error.status : null,
+        retryScheduled: retryable,
+        retryReason: "next full-refresh run",
+      }),
+    },
+  });
+}
+
+function isRetryableRiotError(error: unknown): boolean {
+  return error instanceof RiotApiError && (
+    error.status === null ||
+    error.status === 429 ||
+    error.status === 500 ||
+    error.status === 502 ||
+    error.status === 503
+  );
 }
 
 function sleep(delayMs: number) {

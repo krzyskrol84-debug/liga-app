@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { backendConfig } from "../config.js";
 import {
   RiotApiClient,
   RiotApiError,
@@ -50,6 +51,19 @@ const challengerQuerySchema = z.object({
 });
 
 export const riotRouter = Router();
+
+riotRouter.get("/status", (_request, response) => {
+  const available = backendConfig.riotApiKey.trim().length > 0;
+
+  return response.json({
+    ok: true,
+    available,
+    state: available ? "available" : "missing",
+    message: available
+      ? "RIOT_API_KEY is configured in backend environment."
+      : "RIOT_API_KEY is not configured in backend environment.",
+  });
+});
 
 riotRouter.get("/account", async (request, response) => {
   const parsed = accountQuerySchema.safeParse(request.query);

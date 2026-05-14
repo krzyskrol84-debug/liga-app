@@ -227,7 +227,10 @@ type MatchupAnalyticsEntry = {
 type BackendStatus = {
   state: BackendConnectionState;
   url: string;
+  healthUrl: string;
   message: string;
+  lastHealthResponse: string;
+  lastHealthError: string | null;
 };
 
 type BackendRecommendationDto = {
@@ -285,6 +288,7 @@ type BackendMatchupsResponse = {
 type BackendDiagnosticsResponse = {
   ok: true;
   backendOnline: boolean;
+  riotApiAvailable?: boolean;
   latestPatch: {
     patch: string;
     source: string;
@@ -316,6 +320,41 @@ type BackendDiagnosticsResponse = {
   } | null;
 };
 
+type BackendJobStatusResponse = {
+  running: boolean;
+  currentJob: string | null;
+  progress: number;
+  processedMatches: number;
+  recommendationStatsAdded: number;
+  itemStatsAdded: number;
+  matchupStatsAdded: number;
+  currentChampion: string | null;
+  currentRole: string | null;
+  estimatedRemainingMinutes: number | null;
+};
+
+type BackendHealthResponse = {
+  ok: boolean;
+  service: string;
+  database?: {
+    ok: boolean;
+    error?: string;
+  };
+};
+
+type BackendRiotApiStatusResponse = {
+  ok: boolean;
+  available: boolean;
+  state: "available" | "missing" | "error" | string;
+  message: string;
+};
+
+type BackendVersionResponse = {
+  version: string;
+  buildTime: string;
+  statsUpdatedAt: string | null;
+};
+
 const roleLabels: Record<Role, string> = {
   top: "Top",
   jungle: "Jungle",
@@ -334,20 +373,20 @@ const matchupAnalyticsIndex = buildMatchupAnalyticsIndex(matchupAnalyticsEntries
 const fallbackChampionsList = [...recommendationIndex.byChampion.keys()].sort();
 const allRoles = Object.keys(roleLabels) as Role[];
 const recommendationOptionsCache = buildRecommendationOptionsCache(recommendationIndex);
-const backendUrl = normalizeBackendUrl(__BACKEND_URL__);
+const backendUrl = resolveFrontendBackendUrl();
 const defaultSeedRankedAccountsPayload = {
   platformRegion: "eun1",
   routingRegion: "europe",
   queue: "RANKED_SOLO_5x5",
   tiers: ["CHALLENGER", "GRANDMASTER", "MASTER"],
-  limit: 200,
+  limit: 1000,
 } as const;
 const defaultUpdateStatsPayload = {
-  count: 20,
+  count: 80,
 } as const;
 const defaultFullRefreshPayload = {
   ...defaultSeedRankedAccountsPayload,
-  count: 20,
+  count: 80,
 } as const;
 const emptyBackendItems: BackendItemsResponse = {
   startingItems: [],
@@ -359,6 +398,18 @@ const emptyBackendItems: BackendItemsResponse = {
 const emptyBackendMatchups: BackendMatchupsResponse = {
   toughestMatchups: [],
   bestMatchups: [],
+};
+const emptyBackendJobStatus: BackendJobStatusResponse = {
+  running: false,
+  currentJob: null,
+  progress: 0,
+  processedMatches: 0,
+  recommendationStatsAdded: 0,
+  itemStatsAdded: 0,
+  matchupStatsAdded: 0,
+  currentChampion: null,
+  currentRole: null,
+  estimatedRemainingMinutes: null,
 };
 
 const emptyClientStatus: LeagueClientStatus = {
@@ -381,7 +432,10 @@ export function App() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>({
     state: backendUrl ? "checking" : "offline",
     url: backendUrl,
+    healthUrl: backendUrl ? `${backendUrl}/health` : "",
     message: backendUrl ? "Checking backend connection..." : "Backend URL is not configured.",
+    lastHealthResponse: "Not checked yet.",
+    lastHealthError: null,
   });
   const [clientStatus, setClientStatus] = useState<LeagueClientStatus>(emptyClientStatus);
   const [champion, setChampion] = useState(fallbackChampionsList[0] ?? "Ahri");
@@ -401,6 +455,8 @@ export function App() {
   const [backendItemAnalytics, setBackendItemAnalytics] = useState<BackendItemsResponse | null>(null);
   const [backendMatchups, setBackendMatchups] = useState<BackendMatchupsResponse | null>(null);
   const [backendDiagnostics, setBackendDiagnostics] = useState<BackendDiagnosticsResponse | null>(null);
+  const [backendJobStatus, setBackendJobStatus] = useState<BackendJobStatusResponse>(emptyBackendJobStatus);
+  const [backendVersion, setBackendVersion] = useState<BackendVersionResponse | null>(null);
   const [backendAdminAction, setBackendAdminAction] = useState<BackendAdminAction>(null);
   const [backendAdminError, setBackendAdminError] = useState<string | null>(null);
   const [backendDataLoading, setBackendDataLoading] = useState(false);
@@ -417,6 +473,7 @@ export function App() {
   const backendItemAnalyticsCacheRef = useRef<Map<string, BackendItemsResponse>>(new Map());
   const backendMatchupsCacheRef = useRef<Map<string, BackendMatchupsResponse>>(new Map());
   const backendRequestKeyRef = useRef<string | null>(null);
+  const backendStatsUpdatedAtRef = useRef<string | null>(null);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -516,6 +573,8 @@ export function App() {
     void loadStaticData(false);
     void refreshRiotApiStatus();
     void refreshBackendStatus();
+    void refreshBackendJobStatus();
+    void refreshBackendVersion();
     void refreshClientStatus();
     void loadSettings();
     void refreshLogs();
@@ -527,6 +586,20 @@ export function App() {
       }
     };
   }, [isOverlay]);
+
+  useEffect(() => {
+    if (isOverlay || !backendUrl || (view !== "diagnostics" && !backendAdminAction && !backendJobStatus.running)) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshBackendJobStatus();
+    }, backendJobStatus.running || backendAdminAction ? 2_000 : 5_000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [backendAdminAction, backendJobStatus.running, isOverlay, view]);
 
   useEffect(() => {
     if (staticData?.champions.length && !staticData.champions.some((item) => item.name === champion)) {
@@ -657,6 +730,30 @@ export function App() {
   }, []);
 
   const refreshRiotApiStatus = useCallback(async () => {
+    if (backendUrl) {
+      try {
+        const backendRiotStatus = await fetchBackendJson<BackendRiotApiStatusResponse>("/api/riot/status", {
+          timeoutMs: 4_000,
+          retries: 1,
+        });
+        const nextStatus: RiotApiStatus = {
+          state: backendRiotStatus.available ? "available" : "missing",
+          message: backendRiotStatus.message,
+          statusCode: null,
+        };
+        setRiotApiStatus((current) => (isSameRiotApiStatus(current, nextStatus) ? current : nextStatus));
+        return;
+      } catch (error) {
+        const nextStatus: RiotApiStatus = {
+          state: "error",
+          message: `Backend Riot API status unavailable: ${formatError(error)}`,
+          statusCode: null,
+        };
+        setRiotApiStatus((current) => (isSameRiotApiStatus(current, nextStatus) ? current : nextStatus));
+        return;
+      }
+    }
+
     try {
       const nextStatus = await invoke<RiotApiStatus>("get_riot_api_status");
       setRiotApiStatus((current) => (isSameRiotApiStatus(current, nextStatus) ? current : nextStatus));
@@ -666,12 +763,52 @@ export function App() {
     }
   }, []);
 
+  const clearBackendDataCache = useCallback(() => {
+    backendRecommendationsCacheRef.current.clear();
+    backendItemAnalyticsCacheRef.current.clear();
+    backendMatchupsCacheRef.current.clear();
+    setBackendRecommendations(null);
+    setBackendItemAnalytics(null);
+    setBackendMatchups(null);
+  }, []);
+
+  const refreshBackendVersion = useCallback(async () => {
+    if (!backendUrl) {
+      setBackendVersion(null);
+      backendStatsUpdatedAtRef.current = null;
+      return null;
+    }
+
+    try {
+      const nextVersion = await fetchBackendJson<BackendVersionResponse>("/api/version", {
+        timeoutMs: 4_000,
+        retries: 1,
+      });
+
+      if (
+        backendStatsUpdatedAtRef.current !== null &&
+        nextVersion.statsUpdatedAt !== backendStatsUpdatedAtRef.current
+      ) {
+        clearBackendDataCache();
+      }
+
+      backendStatsUpdatedAtRef.current = nextVersion.statsUpdatedAt;
+      setBackendVersion(nextVersion);
+      return nextVersion;
+    } catch {
+      return null;
+    }
+  }, [clearBackendDataCache]);
+
   const refreshBackendStatus = useCallback(async () => {
     if (!backendUrl) {
       const nextStatus: BackendStatus = {
         state: "offline",
         url: "",
+        healthUrl: "",
         message: "Backend URL is not configured.",
+        lastHealthResponse: "Not checked yet.",
+        lastHealthError: null,
       };
       setBackendStatus((current) => (isSameBackendStatus(current, nextStatus) ? current : nextStatus));
       return nextStatus;
@@ -688,32 +825,80 @@ export function App() {
     );
 
     try {
-      const diagnostics = await fetchBackendJson<BackendDiagnosticsResponse>("/api/diagnostics");
-      setBackendDiagnostics(diagnostics);
+      const health = await fetchBackendJson<BackendHealthResponse>("/health", {
+        timeoutMs: 4_000,
+        retries: 2,
+      });
+      let diagnostics: BackendDiagnosticsResponse | null = null;
+
+      try {
+        diagnostics = await fetchBackendJson<BackendDiagnosticsResponse>("/api/diagnostics", {
+          timeoutMs: 6_000,
+          retries: 1,
+        });
+        setBackendDiagnostics(diagnostics);
+      } catch {
+        setBackendDiagnostics(null);
+      }
+
+      const backendOnline = health.ok === true;
+      const riotApiAvailable = diagnostics?.riotApiAvailable ?? null;
       const nextStatus: BackendStatus = {
-        state: diagnostics.backendOnline ? "online" : "offline",
+        state: backendOnline ? "online" : "offline",
         url: backendUrl,
-        message: diagnostics.backendOnline
-          ? `Backend online${diagnostics.latestPatch?.patch ? ` | Patch ${diagnostics.latestPatch.patch}` : ""}`
-          : "Backend diagnostics check failed.",
+        healthUrl: `${backendUrl}/health`,
+        message: backendOnline
+          ? `Backend online${diagnostics?.latestPatch?.patch ? ` | Patch ${diagnostics.latestPatch.patch}` : ""}${
+              riotApiAvailable === null ? "" : riotApiAvailable ? " | Riot API available" : " | Riot API missing"
+            }`
+          : "Backend health check failed.",
+        lastHealthResponse: JSON.stringify(health),
+        lastHealthError: null,
       };
       setBackendStatus((current) => (isSameBackendStatus(current, nextStatus) ? current : nextStatus));
       return nextStatus;
     } catch (error) {
       setBackendDiagnostics(null);
+      const message = formatError(error);
       const nextStatus: BackendStatus = {
         state: "offline",
         url: backendUrl,
-        message: formatError(error),
+        healthUrl: `${backendUrl}/health`,
+        message,
+        lastHealthResponse: "Unavailable",
+        lastHealthError: message,
       };
       setBackendStatus((current) => (isSameBackendStatus(current, nextStatus) ? current : nextStatus));
       return nextStatus;
     }
   }, []);
 
+  const refreshBackendJobStatus = useCallback(async () => {
+    if (!backendUrl) {
+      setBackendJobStatus(emptyBackendJobStatus);
+      return emptyBackendJobStatus;
+    }
+
+    try {
+      const nextStatus = await fetchBackendJson<BackendJobStatusResponse>("/api/jobs/status", {
+        timeoutMs: 4_000,
+        retries: 1,
+      });
+      setBackendJobStatus(nextStatus);
+      return nextStatus;
+    } catch {
+      setBackendJobStatus((current) => ({
+        ...current,
+        running: false,
+      }));
+      return null;
+    }
+  }, []);
+
   const loadBackendData = useCallback(
     async (championId: number, championName: string, selectedRole: Role) => {
       const cacheKey = `${championId}:${selectedRole}`;
+      const backendRole = mapFrontendRoleToBackendRole(selectedRole);
       backendRequestKeyRef.current = cacheKey;
       setBackendDataLoading(true);
 
@@ -738,11 +923,11 @@ export function App() {
       try {
         const [recommendationResponse, itemsResponse, matchupsResponse] = await Promise.all([
           fetchBackendJson<BackendRecommendationDto[]>(
-            `/api/recommendations?championId=${championId}&role=${selectedRole}`,
+            `/api/recommendations?championId=${championId}&role=${backendRole}`,
           ),
-          fetchBackendJson<BackendItemsResponse>(`/api/items?championId=${championId}&role=${selectedRole}`),
+          fetchBackendJson<BackendItemsResponse>(`/api/items?championId=${championId}&role=${backendRole}`),
           fetchBackendJson<BackendMatchupsResponse>(
-            `/api/matchups?championId=${championId}&role=${selectedRole}`,
+            `/api/matchups?championId=${championId}&role=${backendRole}`,
           ),
         ]);
 
@@ -780,7 +965,10 @@ export function App() {
         const nextStatus: BackendStatus = {
           state: "online",
           url: backendUrl,
+          healthUrl: `${backendUrl}/health`,
           message: "Backend online",
+          lastHealthResponse: current.lastHealthResponse,
+          lastHealthError: current.lastHealthError,
         };
           return isSameBackendStatus(current, nextStatus) ? current : nextStatus;
         });
@@ -794,9 +982,12 @@ export function App() {
         setBackendMatchups(null);
         setBackendStatus((current) => {
           const nextStatus: BackendStatus = {
-            state: "offline",
+            state: current.state === "online" ? "online" : "checking",
             url: backendUrl,
-            message,
+            healthUrl: `${backendUrl}/health`,
+            message: current.state === "online" ? `Backend online; data request failed: ${message}` : message,
+            lastHealthResponse: current.lastHealthResponse,
+            lastHealthError: current.lastHealthError,
           };
           return isSameBackendStatus(current, nextStatus) ? current : nextStatus;
         });
@@ -810,18 +1001,16 @@ export function App() {
   );
 
   const refreshBackendSnapshot = useCallback(async () => {
+    clearBackendDataCache();
+    await refreshBackendVersion();
     await refreshBackendStatus();
     const championId = selectedChampion?.key ?? 0;
     if (!championId || !staticData) {
       return;
     }
 
-    const cacheKey = `${championId}:${role}`;
-    backendRecommendationsCacheRef.current.delete(cacheKey);
-    backendItemAnalyticsCacheRef.current.delete(cacheKey);
-    backendMatchupsCacheRef.current.delete(cacheKey);
     await loadBackendData(championId, champion, role);
-  }, [champion, loadBackendData, refreshBackendStatus, role, selectedChampion?.key, staticData]);
+  }, [champion, clearBackendDataCache, loadBackendData, refreshBackendStatus, refreshBackendVersion, role, selectedChampion?.key, staticData]);
 
   const testRiotApi = useCallback(async () => {
     try {
@@ -880,6 +1069,7 @@ export function App() {
       await logAppEvent("info", "backend_admin", `Backend admin action '${action}' completed.`, {
         path,
       });
+      await refreshBackendJobStatus();
       await refreshBackendSnapshot();
     } catch (error) {
       const message = formatError(error);
@@ -888,11 +1078,12 @@ export function App() {
         path,
         error: message,
       });
+      await refreshBackendJobStatus();
       await refreshBackendStatus();
     } finally {
       setBackendAdminAction(null);
     }
-  }, [logAppEvent, refreshBackendSnapshot, refreshBackendStatus]);
+  }, [logAppEvent, refreshBackendJobStatus, refreshBackendSnapshot, refreshBackendStatus]);
 
   const refreshLogs = useCallback(async () => {
     try {
@@ -1283,6 +1474,8 @@ export function App() {
             riotApiStatus={riotApiStatus}
             backendStatus={backendStatus}
             backendDiagnostics={backendDiagnostics}
+            backendJobStatus={backendJobStatus}
+            backendVersion={backendVersion}
             recommendationCount={buildOptions.length}
             championCount={champions.length}
             currentGameflowPhase={clientStatus.gameflowPhase}
@@ -2067,7 +2260,7 @@ function RiotApiBadge({ status }: { status: RiotApiStatus }) {
   return (
     <div className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-wide shadow-[0_8px_24px_rgba(0,0,0,0.18)] ${className}`}>
       <PlugZap size={16} />
-      Riot API: {status.state}
+      Local Riot API: {status.state}
     </div>
   );
 }
@@ -2483,6 +2676,8 @@ function DiagnosticsScreen({
   riotApiStatus,
   backendStatus,
   backendDiagnostics,
+  backendJobStatus,
+  backendVersion,
   recommendationCount,
   championCount,
   currentGameflowPhase,
@@ -2506,6 +2701,8 @@ function DiagnosticsScreen({
   riotApiStatus: RiotApiStatus;
   backendStatus: BackendStatus;
   backendDiagnostics: BackendDiagnosticsResponse | null;
+  backendJobStatus: BackendJobStatusResponse;
+  backendVersion: BackendVersionResponse | null;
   recommendationCount: number;
   championCount: number;
   currentGameflowPhase: string | null;
@@ -2549,6 +2746,11 @@ function DiagnosticsScreen({
           <DiagnosticStat label="Champions" value={championCount.toString()} tone="cyan" />
           <DiagnosticStat label="Tracked Accounts" value={String(backendDiagnostics?.trackedAccountsCount ?? 0)} tone="cyan" />
           <DiagnosticStat label="Match Records" value={String(backendDiagnostics?.matchRecordsCount ?? 0)} tone="cyan" />
+          <DiagnosticStat label="Current Job" value={backendJobStatus.currentJob ?? "Idle"} tone={backendJobStatus.running ? "cyan" : "amber"} />
+          <DiagnosticStat label="Progress" value={`${backendJobStatus.progress}%`} tone={backendJobStatus.running ? "cyan" : "amber"} />
+          <DiagnosticStat label="Processed Matches" value={String(backendJobStatus.processedMatches)} tone={backendJobStatus.running ? "cyan" : "amber"} />
+          <DiagnosticStat label="Current Champion" value={backendJobStatus.currentChampion ?? "None"} tone={backendJobStatus.running ? "cyan" : "amber"} />
+          <DiagnosticStat label="Current Role" value={backendJobStatus.currentRole ?? "None"} tone={backendJobStatus.running ? "cyan" : "amber"} />
         </div>
         <div className="mt-5 grid gap-3">
           <StatusTile label="Last auto accept" value={diagnosticsSummary.lastAutoAccept} tone="slate" />
@@ -2578,11 +2780,24 @@ function DiagnosticsScreen({
           </button>
         </div>
         <Message tone={riotApiStatus.state === "error" ? "rose" : riotApiStatus.state === "available" ? "emerald" : "amber"}>
-          Riot API: {riotApiStatus.message}
+          Local Riot API: {riotApiStatus.message}
         </Message>
+        {backendOnline ? (
+          <Message tone="emerald">Remote stats source: Railway backend</Message>
+        ) : null}
         <Message tone={backendStatus.state === "online" ? "emerald" : backendStatus.state === "checking" ? "cyan" : "amber"}>
           Backend: {backendStatus.message}
         </Message>
+        <Message tone="cyan">Backend URL: {backendStatus.url || "Not configured"}</Message>
+        <Message tone="cyan">Health URL: {backendStatus.healthUrl || "Not configured"}</Message>
+        {backendVersion ? (
+          <Message tone="cyan">
+            Backend version: {backendVersion.version} | build {formatDateTime(backendVersion.buildTime)} | stats{" "}
+            {backendVersion.statsUpdatedAt ? formatDateTime(backendVersion.statsUpdatedAt) : "never"}
+          </Message>
+        ) : null}
+        <Message tone="cyan">Last backend health response: {backendStatus.lastHealthResponse}</Message>
+        {backendStatus.lastHealthError ? <Message tone="rose">Last backend health error: {backendStatus.lastHealthError}</Message> : null}
         {backendDiagnostics?.lastFullRefresh ? (
           <Message tone="cyan">
             Last full refresh: {backendDiagnostics.lastFullRefresh.status} | duration {backendDiagnostics.lastFullRefresh.durationMs ?? 0}ms
@@ -2595,6 +2810,12 @@ function DiagnosticsScreen({
         ) : null}
         {backendAdminAction ? (
           <Message tone="cyan">Backend refresh progress: {backendAdminAction}</Message>
+        ) : null}
+        {backendJobStatus.running ? (
+          <Message tone="cyan">
+            Analyzer: {backendJobStatus.currentJob ?? "running"} | {backendJobStatus.progress}% | {backendJobStatus.processedMatches} matches
+            {backendJobStatus.estimatedRemainingMinutes ? ` | ~${backendJobStatus.estimatedRemainingMinutes} min left` : ""}
+          </Message>
         ) : null}
         {dataStatus?.message ? <Message tone="emerald">Data Dragon: {dataStatus.message}</Message> : null}
         {dataStatus ? <Message tone="cyan">Patch source: {dataStatus.patchSource}</Message> : null}
@@ -2625,6 +2846,17 @@ function DiagnosticsScreen({
             <DiagnosticStat label="Recommendations" value={String(backendDiagnostics?.recommendationStatsCount ?? 0)} tone="cyan" />
             <DiagnosticStat label="Item Stats" value={String(backendDiagnostics?.itemStatsCount ?? 0)} tone="cyan" />
             <DiagnosticStat label="Matchups" value={String(backendDiagnostics?.matchupStatsCount ?? 0)} tone="cyan" />
+            <DiagnosticStat label="Current Job" value={backendJobStatus.currentJob ?? "Idle"} tone={backendJobStatus.running ? "cyan" : "amber"} />
+            <DiagnosticStat label="Progress" value={`${backendJobStatus.progress}%`} tone={backendJobStatus.running ? "cyan" : "amber"} />
+            <DiagnosticStat label="Processed Matches" value={String(backendJobStatus.processedMatches)} tone={backendJobStatus.running ? "cyan" : "amber"} />
+            <DiagnosticStat label="Current Champion" value={backendJobStatus.currentChampion ?? "None"} tone={backendJobStatus.running ? "cyan" : "amber"} />
+            <DiagnosticStat label="Current Role" value={backendJobStatus.currentRole ?? "None"} tone={backendJobStatus.running ? "cyan" : "amber"} />
+            <DiagnosticStat label="Backend Version" value={backendVersion?.version ?? "Unknown"} tone="cyan" />
+            <DiagnosticStat label="Stats Updated" value={backendVersion?.statsUpdatedAt ? formatDateTime(backendVersion.statsUpdatedAt) : "Never"} tone="cyan" />
+            <DiagnosticStat label="Backend URL" value={backendStatus.url || "Not configured"} tone="cyan" />
+            <DiagnosticStat label="Health URL" value={backendStatus.healthUrl || "Not configured"} tone="cyan" />
+            <DiagnosticStat label="Health Response" value={backendStatus.lastHealthResponse} tone="cyan" />
+            <DiagnosticStat label="Health Error" value={backendStatus.lastHealthError ?? "None"} tone={backendStatus.lastHealthError ? "rose" : "cyan"} />
             <DiagnosticStat
               label="Last Full Refresh"
               value={backendDiagnostics?.lastFullRefresh?.finishedAt ?? backendDiagnostics?.lastFullRefresh?.startedAt ?? "Never"}
@@ -3205,35 +3437,63 @@ async function fetchBackendJson<T>(
   options?: {
     method?: "GET" | "POST";
     body?: unknown;
+    timeoutMs?: number;
+    retries?: number;
   },
 ): Promise<T> {
   if (!backendUrl) {
     throw new Error("Backend URL is not configured.");
   }
 
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 5_000);
+  const retries = options?.retries ?? 0;
+  const timeoutMs = options?.timeoutMs ?? 5_000;
+  let lastError: unknown = null;
 
-  try {
-    const response = await fetch(`${backendUrl}${path}`, {
-      method: options?.method ?? "GET",
-      headers: {
-        Accept: "application/json",
-        ...(options?.body ? { "Content-Type": "application/json" } : {}),
-      },
-      body: options?.body ? JSON.stringify(options.body) : undefined,
-      signal: controller.signal,
-    });
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
 
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Backend request failed (${response.status}): ${body || path}`);
+    try {
+      const response = await fetch(`${backendUrl}${path}`, {
+        method: options?.method ?? "GET",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          "Cache-Control": "no-store",
+          ...(options?.body ? { "Content-Type": "application/json" } : {}),
+        },
+        body: options?.body ? JSON.stringify(options.body) : undefined,
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`Backend request failed (${response.status}): ${body || path}`);
+      }
+
+      return (await response.json()) as T;
+    } catch (error) {
+      lastError = error instanceof DOMException && error.name === "AbortError"
+        ? new Error(`Backend request timed out after ${timeoutMs}ms: ${path}`)
+        : error;
+
+      if (attempt >= retries) {
+        break;
+      }
+
+      await sleep(250 * (attempt + 1));
+    } finally {
+      window.clearTimeout(timer);
     }
-
-    return (await response.json()) as T;
-  } finally {
-    window.clearTimeout(timer);
   }
+
+  throw lastError instanceof Error ? lastError : new Error(formatError(lastError));
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 }
 
 function normalizeBackendUrl(value: string | null | undefined): string {
@@ -3245,8 +3505,40 @@ function normalizeBackendUrl(value: string | null | undefined): string {
   return trimmed.replace(/\/+$/, "");
 }
 
+function mapFrontendRoleToBackendRole(role: Role): Role {
+  const mapping: Record<Role, Role> = {
+    top: "top",
+    jungle: "jungle",
+    middle: "middle",
+    bottom: "bottom",
+    utility: "utility",
+  };
+
+  return mapping[role];
+}
+
+function resolveFrontendBackendUrl(): string {
+  const configuredUrl = normalizeBackendUrl(import.meta.env.VITE_BACKEND_URL);
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  if (import.meta.env.DEV) {
+    return "http://127.0.0.1:8787";
+  }
+
+  return "";
+}
+
 function isSameBackendStatus(a: BackendStatus, b: BackendStatus): boolean {
-  return a.state === b.state && a.url === b.url && a.message === b.message;
+  return (
+    a.state === b.state &&
+    a.url === b.url &&
+    a.healthUrl === b.healthUrl &&
+    a.message === b.message &&
+    a.lastHealthResponse === b.lastHealthResponse &&
+    a.lastHealthError === b.lastHealthError
+  );
 }
 
 function formatError(error: unknown): string {

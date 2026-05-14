@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { backendConfig } from "../config.js";
 import { prisma } from "../lib/prisma.js";
 import { dataDragonService } from "../riot/DataDragonService.js";
 
@@ -41,6 +42,7 @@ diagnosticsRouter.get("/", async (_request, response, next) => {
     return response.json({
       ok: true,
       backendOnline: true,
+      riotApiAvailable: backendConfig.riotApiKey.trim().length > 0,
       latestPatch,
       trackedAccountsCount,
       matchRecordsCount,

@@ -1,9 +1,19 @@
 import { prisma } from "../lib/prisma.js";
 import { clearAnalyticsCache } from "../lib/analyticsCache.js";
 import { assertNoRunningJob } from "../lib/jobGuards.js";
+import { logInfo } from "../lib/logger.js";
+import {
+  failAnalyzerJobStatus,
+  finishAnalyzerJobStatus,
+  serializeAnalyzerJobStatus,
+  startAnalyzerJobStatus,
+  updateAnalyzerJobStatus,
+} from "../lib/jobStatus.js";
+import { dataDragonService } from "../riot/DataDragonService.js";
 
 const RECORD_BATCH_SIZE = 200;
 const WRITE_BATCH_SIZE = 250;
+const PROGRESS_SAVE_INTERVAL = 25;
 
 type SupportedRole = "TOP" | "JUNGLE" | "MIDDLE" | "BOTTOM" | "UTILITY";
 type NormalizedRole = "top" | "jungle" | "middle" | "bottom" | "utility";
@@ -119,18 +129,29 @@ export class MatchAnalyzer {
   async analyzeGlobalStats(): Promise<AnalyzeGlobalStatsResult> {
     await assertNoRunningJob("analyze-global-stats");
     const startedAt = new Date();
+    startAnalyzerJobStatus("analyze-global-stats");
     const jobLog = await prisma.fetchJobLog.create({
       data: {
         jobName: "analyze-global-stats",
         status: "running",
         target: "match-records",
         startedAt,
+        metadata: serializeAnalyzerJobStatus(updateAnalyzerJobStatus({ progress: 0 })),
       },
     });
 
     try {
       const latestPatch = await resolveLatestPatch();
       if (!latestPatch) {
+        const finalStatus = finishAnalyzerJobStatus({
+          progress: 100,
+          processedMatches: 0,
+          recommendationStatsAdded: 0,
+          itemStatsAdded: 0,
+          matchupStatsAdded: 0,
+          currentChampion: null,
+          currentRole: null,
+        });
         await prisma.fetchJobLog.update({
           where: { id: jobLog.id },
           data: {
@@ -140,6 +161,7 @@ export class MatchAnalyzer {
             recordsRead: 0,
             recordsSaved: 0,
             metadata: JSON.stringify({
+              jobStatus: finalStatus,
               matchesAnalyzed: 0,
               recommendationStatsCount: 0,
               itemStatsCount: 0,
@@ -159,11 +181,31 @@ export class MatchAnalyzer {
         };
       }
 
+      const totalRecords = await prisma.matchRecord.count({
+        where: {
+          patch: latestPatch,
+        },
+      });
+      const championNameById = await getChampionNameMapping();
       const recommendationAggregates = new Map<string, RecommendationAggregate>();
       const itemAggregates = new Map<string, ItemAggregate>();
       const matchupAggregates = new Map<string, MatchupAggregate>();
       let processedRecords = 0;
       let cursorId: string | undefined;
+
+      await saveAnalyzerProgress({
+        jobLogId: jobLog.id,
+        startedAt,
+        processedRecords,
+        totalRecords,
+        recommendationStatsAdded: 0,
+        itemStatsAdded: 0,
+        matchupStatsAdded: 0,
+        currentChampion: null,
+        currentRole: null,
+        currentSummoner: null,
+        currentMatchId: null,
+      });
 
       while (true) {
         const records = await prisma.matchRecord.findMany({
@@ -206,6 +248,30 @@ export class MatchAnalyzer {
           }
 
           accumulateMatchups(matchupAggregates, extractedParticipants);
+
+          if (processedRecords % PROGRESS_SAVE_INTERVAL === 0) {
+            const currentParticipant = extractedParticipants[0] ?? null;
+            await saveAnalyzerProgress({
+              jobLogId: jobLog.id,
+              startedAt,
+              processedRecords,
+              totalRecords,
+              recommendationStatsAdded: recommendationAggregates.size,
+              itemStatsAdded: itemAggregates.size,
+              matchupStatsAdded: matchupAggregates.size,
+              currentChampion: currentParticipant
+                ? championNameById.get(currentParticipant.championId) ?? `Champion ${currentParticipant.championId}`
+                : null,
+              currentRole: currentParticipant?.role ?? null,
+              currentSummoner: record.puuid,
+              currentMatchId: record.riotMatchId,
+            });
+            logInfo("[riot]", {
+              match: record.riotMatchId,
+              status: "processed",
+              currentSummoner: record.puuid,
+            });
+          }
         }
 
         cursorId = records.at(-1)?.id;
@@ -259,6 +325,25 @@ export class MatchAnalyzer {
         fetchedAt: now,
       }));
 
+      await saveAnalyzerProgress({
+        jobLogId: jobLog.id,
+        startedAt,
+        processedRecords,
+        totalRecords,
+        recommendationStatsAdded: recommendationStatsRows.length,
+        itemStatsAdded: itemStatsRows.length,
+        matchupStatsAdded: matchupStatsRows.length,
+        currentChampion: null,
+        currentRole: null,
+        currentSummoner: null,
+        currentMatchId: null,
+      });
+
+      logInfo("[db] clearing old riot-api stats", {
+        recommendationStats: recommendationStatsRows.length,
+        itemStats: itemStatsRows.length,
+        matchupStats: matchupStatsRows.length,
+      });
       await prisma.$transaction([
         prisma.recommendationStats.deleteMany({
           where: {
@@ -278,6 +363,11 @@ export class MatchAnalyzer {
       ]);
 
       for (const rows of chunk(recommendationStatsRows, WRITE_BATCH_SIZE)) {
+        logInfo("[db] saving recommendation stats batch", {
+          rows: rows.length,
+          champion: formatChampionName(rows[0]?.championId, championNameById),
+          role: rows[0]?.role ?? null,
+        });
         await prisma.$transaction([
           prisma.recommendationStats.createMany({
             data: rows,
@@ -286,6 +376,11 @@ export class MatchAnalyzer {
       }
 
       for (const rows of chunk(itemStatsRows, WRITE_BATCH_SIZE)) {
+        logInfo("[db] saving item stats batch", {
+          rows: rows.length,
+          champion: formatChampionName(rows[0]?.championId, championNameById),
+          role: rows[0]?.role ?? null,
+        });
         await prisma.$transaction([
           prisma.itemStats.createMany({
             data: rows,
@@ -294,6 +389,11 @@ export class MatchAnalyzer {
       }
 
       for (const rows of chunk(matchupStatsRows, WRITE_BATCH_SIZE)) {
+        logInfo("[db] saving matchup stats batch", {
+          rows: rows.length,
+          champion: formatChampionName(rows[0]?.championId, championNameById),
+          role: rows[0]?.role ?? null,
+        });
         await prisma.$transaction([
           prisma.matchupStats.createMany({
             data: rows,
@@ -301,11 +401,28 @@ export class MatchAnalyzer {
         ]);
       }
 
+      logInfo("[db] saved analyzer stats", {
+        saved: "stats",
+        recommendationStatsAdded: recommendationStatsRows.length,
+        itemStatsAdded: itemStatsRows.length,
+        matchupStatsAdded: matchupStatsRows.length,
+        matchesProcessed: processedRecords,
+      });
+
       recommendationAggregates.clear();
       itemAggregates.clear();
       matchupAggregates.clear();
 
       const finishedAt = new Date();
+      const finalStatus = finishAnalyzerJobStatus({
+        progress: 100,
+        processedMatches: processedRecords,
+        recommendationStatsAdded: recommendationStatsRows.length,
+        itemStatsAdded: itemStatsRows.length,
+        matchupStatsAdded: matchupStatsRows.length,
+        currentChampion: null,
+        currentRole: null,
+      });
       await prisma.fetchJobLog.update({
         where: { id: jobLog.id },
         data: {
@@ -316,6 +433,7 @@ export class MatchAnalyzer {
           recordsSaved:
             recommendationStatsRows.length + itemStatsRows.length + matchupStatsRows.length,
           metadata: JSON.stringify({
+            jobStatus: finalStatus,
             matchesAnalyzed: processedRecords,
             recommendationStatsCount: recommendationStatsRows.length,
             itemStatsCount: itemStatsRows.length,
@@ -336,6 +454,7 @@ export class MatchAnalyzer {
       };
     } catch (error) {
       const finishedAt = new Date();
+      const failedStatus = failAnalyzerJobStatus();
       await prisma.fetchJobLog.update({
         where: { id: jobLog.id },
         data: {
@@ -343,6 +462,7 @@ export class MatchAnalyzer {
           finishedAt,
           durationMs: finishedAt.getTime() - startedAt.getTime(),
           errorMessage: getSafeErrorMessage(error),
+          metadata: serializeAnalyzerJobStatus(failedStatus),
         },
       });
       clearAnalyticsCache();
@@ -655,6 +775,108 @@ async function countProcessedParticipants() {
   }
 
   return count;
+}
+
+async function saveAnalyzerProgress(options: {
+  jobLogId: string;
+  startedAt: Date;
+  processedRecords: number;
+  totalRecords: number;
+  recommendationStatsAdded: number;
+  itemStatsAdded: number;
+  matchupStatsAdded: number;
+  currentChampion: string | null;
+  currentRole: NormalizedRole | null;
+  currentSummoner: string | null;
+  currentMatchId: string | null;
+}) {
+  const progress = calculateProgress(options.processedRecords, options.totalRecords);
+  const status = updateAnalyzerJobStatus({
+    progress,
+    processedMatches: options.processedRecords,
+    recommendationStatsAdded: options.recommendationStatsAdded,
+    itemStatsAdded: options.itemStatsAdded,
+    matchupStatsAdded: options.matchupStatsAdded,
+    currentChampion: options.currentChampion,
+    currentRole: options.currentRole,
+    estimatedRemainingMinutes: estimateRemainingMinutes(
+      options.startedAt,
+      options.processedRecords,
+      options.totalRecords,
+    ),
+  });
+
+  logInfo("[analyzer]", {
+    champion: options.currentChampion,
+    role: options.currentRole,
+    matchesProcessed: options.processedRecords,
+    recommendationsAdded: options.recommendationStatsAdded,
+    itemStatsAdded: options.itemStatsAdded,
+    matchupStatsAdded: options.matchupStatsAdded,
+    currentSummoner: options.currentSummoner,
+    currentMatchId: options.currentMatchId,
+    progress: `${progress}%`,
+  });
+
+  await prisma.fetchJobLog.update({
+    where: {
+      id: options.jobLogId,
+    },
+    data: {
+      recordsRead: options.processedRecords,
+      recordsSaved:
+        options.recommendationStatsAdded +
+        options.itemStatsAdded +
+        options.matchupStatsAdded,
+      metadata: serializeAnalyzerJobStatus(status),
+    },
+  });
+}
+
+function calculateProgress(processedRecords: number, totalRecords: number) {
+  if (totalRecords <= 0) {
+    return 0;
+  }
+
+  return Math.min(99, Math.max(0, Math.floor((processedRecords / totalRecords) * 100)));
+}
+
+function estimateRemainingMinutes(
+  startedAt: Date,
+  processedRecords: number,
+  totalRecords: number,
+) {
+  if (processedRecords <= 0 || totalRecords <= 0 || processedRecords >= totalRecords) {
+    return null;
+  }
+
+  const elapsedMinutes = (Date.now() - startedAt.getTime()) / 60_000;
+  const recordsPerMinute = processedRecords / Math.max(elapsedMinutes, 0.001);
+  const remainingRecords = Math.max(0, totalRecords - processedRecords);
+
+  return Math.max(1, Math.ceil(remainingRecords / recordsPerMinute));
+}
+
+function formatChampionName(championId: number | undefined, championNameById: Map<number, string>) {
+  if (!championId) {
+    return null;
+  }
+
+  return championNameById.get(championId) ?? `Champion ${championId}`;
+}
+
+async function getChampionNameMapping() {
+  try {
+    const response = await dataDragonService.getChampions();
+    return new Map(
+      Object.entries(response.mappings.championIdToChampionName).map(([championId, championName]) => [
+        Number(championId),
+        championName,
+      ]),
+    );
+  } catch {
+    return new Map<number, string>();
+  }
 }
 
 async function resolveLatestPatch() {

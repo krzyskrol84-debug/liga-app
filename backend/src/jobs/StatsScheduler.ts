@@ -7,8 +7,8 @@ const schedulerInput: FullRefreshJobInput = {
   routingRegion: "europe",
   queue: "RANKED_SOLO_5x5",
   tiers: ["CHALLENGER", "GRANDMASTER", "MASTER"],
-  limit: 200,
-  count: 20,
+  limit: 1000,
+  count: 80,
 };
 
 export class StatsScheduler {

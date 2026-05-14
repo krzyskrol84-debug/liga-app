@@ -2,10 +2,12 @@ import { prisma } from "../lib/prisma.js";
 import { matchAnalyzer } from "../analytics/MatchAnalyzer.js";
 import { assertNoRunningJob } from "../lib/jobGuards.js";
 import { FetchMatchesJob, type TrackedAccountLike } from "./FetchMatchesJob.js";
+import { RiotApiError } from "../riot/RiotApiClient.js";
 
 const ACCOUNT_COOLDOWN_MS = 90_000;
 const JOB_COOLDOWN_MS = 60_000;
 const BETWEEN_ACCOUNTS_DELAY_MS = 750;
+const RETRYABLE_ACCOUNT_ERROR_STATUSES = new Set([429, 500, 502, 503, 504]);
 
 export class UpdateStatsCooldownError extends Error {
   public readonly retryAfterSeconds: number;
@@ -69,16 +71,48 @@ export class UpdateStatsJob {
       let accountsProcessed = 0;
       let fetchedMatches = 0;
       let skippedMatches = 0;
+      let failedAccounts = 0;
+      let retryScheduledAccounts = 0;
 
       for (const trackedAccount of trackedAccounts) {
         if (shouldSkipAccount(trackedAccount.lastFetchedAt)) {
           continue;
         }
 
-        const result = await this.fetchMatchesJob.fetchAndStoreMatchesForAccount(
-          trackedAccount as TrackedAccountLike,
-          requestedCount,
-        );
+        let result: Awaited<ReturnType<FetchMatchesJob["fetchAndStoreMatchesForAccount"]>>;
+        try {
+          result = await this.fetchMatchesJob.fetchAndStoreMatchesForAccount(
+            trackedAccount as TrackedAccountLike,
+            requestedCount,
+          );
+        } catch (error) {
+          failedAccounts += 1;
+          if (isRetryableRiotError(error)) {
+            retryScheduledAccounts += 1;
+          }
+
+          await prisma.fetchJobLog.create({
+            data: {
+              jobName: "update-stats.account",
+              status: isRetryableRiotError(error) ? "retrying" : "failed",
+              target: `${trackedAccount.gameName}#${trackedAccount.tagLine}`,
+              startedAt: new Date(),
+              finishedAt: new Date(),
+              errorMessage: getSafeErrorMessage(error),
+              metadata: JSON.stringify({
+                puuid: trackedAccount.puuid,
+                platformRegion: trackedAccount.platformRegion,
+                routingRegion: trackedAccount.routingRegion,
+                statusCode: error instanceof RiotApiError ? error.status : null,
+                retryScheduled: isRetryableRiotError(error),
+                retryReason: "next update-stats run",
+              }),
+            },
+          });
+
+          await sleep(BETWEEN_ACCOUNTS_DELAY_MS);
+          continue;
+        }
 
         accountsProcessed += 1;
         fetchedMatches += result.savedMatches;
@@ -117,6 +151,8 @@ export class UpdateStatsJob {
             recommendationsUpdated: globalAnalysis.recommendationStatsCount,
             itemStatsUpdated: globalAnalysis.itemStatsCount,
             matchupStatsUpdated: globalAnalysis.matchupStatsCount,
+            failedAccounts,
+            retryScheduledAccounts,
           }),
         },
       });
@@ -174,6 +210,13 @@ async function assertJobCooldown() {
       Math.ceil(retryAfterMs / 1000),
     );
   }
+}
+
+function isRetryableRiotError(error: unknown): boolean {
+  return error instanceof RiotApiError && (
+    error.status === null ||
+    RETRYABLE_ACCOUNT_ERROR_STATUSES.has(error.status)
+  );
 }
 
 function shouldSkipAccount(lastFetchedAt: Date | null): boolean {

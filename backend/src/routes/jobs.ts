@@ -8,6 +8,7 @@ import { RiotApiError } from "../riot/RiotApiClient.js";
 import { matchAnalyzer } from "../analytics/MatchAnalyzer.js";
 import { matchupAnalyzer } from "../analytics/MatchupAnalyzer.js";
 import { ConcurrentJobError } from "../lib/jobGuards.js";
+import { getAnalyzerJobStatus } from "../lib/jobStatus.js";
 
 const platformRegionSchema = z.enum([
   "br1",
@@ -40,25 +41,33 @@ const fetchMatchesBodySchema = z.object({
 });
 
 const updateStatsBodySchema = z.object({
-  count: z.coerce.number().int().min(1).max(100).default(20),
+  count: z.coerce.number().int().min(1).max(100).default(80),
 }).partial().default({});
 
 const rankedQueueSchema = z.enum(["RANKED_SOLO_5x5"]);
-const rankedTierSchema = z.enum(["CHALLENGER", "GRANDMASTER", "MASTER"]);
+const rankedTierSchema = z.enum(["CHALLENGER", "GRANDMASTER", "MASTER", "DIAMOND_PLUS"]);
 
 const seedRankedAccountsBodySchema = z.object({
   platformRegion: platformRegionSchema,
   routingRegion: routingRegionSchema,
   queue: rankedQueueSchema,
   tiers: z.array(rankedTierSchema).min(1).default(["CHALLENGER", "GRANDMASTER", "MASTER"]),
-  limit: z.coerce.number().int().min(1).max(1000).default(200),
+  limit: z.coerce.number().int().min(1).max(5000).default(1000),
 });
 
 const fullRefreshBodySchema = seedRankedAccountsBodySchema.extend({
-  count: z.coerce.number().int().min(1).max(100).default(20),
+  count: z.coerce.number().int().min(1).max(100).default(80),
 });
 
 export const jobsRouter = Router();
+
+jobsRouter.get("/status", async (_request, response, next) => {
+  try {
+    return response.json(await getAnalyzerJobStatus());
+  } catch (error) {
+    next(error);
+  }
+});
 
 jobsRouter.post("/fetch-matches", async (request, response) => {
   const parsed = fetchMatchesBodySchema.safeParse(request.body);

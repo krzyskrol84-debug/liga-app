@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import { logInfo } from "../lib/logger.js";
 import {
   RiotApiClient,
   type MatchDto,
@@ -9,6 +10,7 @@ import {
 
 const MATCH_FETCH_BATCH_SIZE = 8;
 const INSERT_BATCH_SIZE = 50;
+const FETCH_SUMMARY_INTERVAL = 25;
 
 export type FetchMatchesJobInput = {
   gameName: string;
@@ -103,6 +105,15 @@ export class FetchMatchesJob {
             savedMatches: fetchResult.savedMatches,
           }),
         },
+      });
+
+      logInfo("Fetch matches job completed.", {
+        target,
+        requestedCount: input.count,
+        matchIdsCount: fetchResult.matchIdsCount,
+        skippedExisting: fetchResult.skippedExisting,
+        fetchedNewMatches: fetchResult.fetchedNewMatches,
+        savedMatches: fetchResult.savedMatches,
       });
 
       return {
@@ -210,6 +221,15 @@ export class FetchMatchesJob {
           rawPayload: JSON.stringify(match),
           fetchedAt: new Date(),
         });
+
+        if (fetchedNewMatches % FETCH_SUMMARY_INTERVAL === 0) {
+          logInfo("Match fetch progress summary.", {
+            puuid,
+            fetchedNewMatches,
+            queuedForInsert: rowsToInsert.length,
+            requestedCount: count,
+          });
+        }
       }
     }
 

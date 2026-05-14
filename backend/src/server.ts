@@ -2,8 +2,10 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import { backendConfig, getDatabaseUrlDebugInfo, getRiotApiKeyDebugInfo } from "./config.js";
+import { logError, logInfo, logWarn } from "./lib/logger.js";
 import { prisma } from "./lib/prisma.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { noStoreForApiRoutes } from "./middleware/noStore.js";
 import { rateLimitMiddleware } from "./middleware/rateLimit.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { healthRouter } from "./routes/health.js";
@@ -15,6 +17,7 @@ import { matchupsRouter } from "./routes/matchups.js";
 import { itemsRouter } from "./routes/items.js";
 import { trackedAccountsRouter } from "./routes/trackedAccounts.js";
 import { diagnosticsRouter } from "./routes/diagnostics.js";
+import { versionRouter } from "./routes/version.js";
 import { statsScheduler } from "./jobs/StatsScheduler.js";
 
 const app = express();
@@ -32,10 +35,12 @@ app.use(cors({
   },
 }));
 app.use(express.json({ limit: "1mb" }));
+app.use(noStoreForApiRoutes);
 app.use(requestLogger);
 app.use(rateLimitMiddleware);
 
 app.use("/health", healthRouter);
+app.use("/api/version", versionRouter);
 app.use("/api", dataDragonRouter);
 app.use("/api/riot", riotRouter);
 app.use("/api/jobs", jobsRouter);
@@ -48,36 +53,59 @@ app.use("/api/diagnostics", diagnosticsRouter);
 app.use(errorHandler);
 
 const databaseUrlDebug = getDatabaseUrlDebugInfo(process.env.DATABASE_URL);
-const server = app.listen(backendConfig.port, () => {
-  const riotApiKeyDebug = getRiotApiKeyDebugInfo(backendConfig.riotApiKey);
-  console.info("[backend] Environment loaded.", {
-    envFilePath: backendConfig.envFilePath,
-    riotApiKeyLoaded: riotApiKeyDebug.loaded,
-    keyPrefix: riotApiKeyDebug.prefix,
-    keySuffix: riotApiKeyDebug.suffix,
-    databaseUrlLoaded: databaseUrlDebug.loaded,
-    note: "Changing backend/.env requires a backend restart.",
-    corsOrigins: backendConfig.corsOrigins,
-  });
-  console.log(`liga-backend listening on http://127.0.0.1:${backendConfig.port}`);
+let server: ReturnType<typeof app.listen> | null = null;
 
-  if (backendConfig.enableScheduler) {
-    statsScheduler.start();
-    console.info("[backend] Stats scheduler enabled.", {
-      intervalHours: backendConfig.statsUpdateIntervalHours,
-      defaults: {
-        platformRegion: "eun1",
+async function startServer() {
+  if (databaseUrlDebug.loaded) {
+    try {
+      await prisma.$connect();
+      logInfo("[db] connected to postgres");
+    } catch (error) {
+      logError("[db] postgres connection failed.", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      process.exit(1);
+    }
+  } else {
+    logWarn("[db] DATABASE_URL is not configured. Health checks will report database unavailable.");
+  }
+
+  server = app.listen(backendConfig.port, () => {
+    const riotApiKeyDebug = getRiotApiKeyDebugInfo(backendConfig.riotApiKey);
+    logInfo("Environment loaded.", {
+      envFilePath: backendConfig.envFilePath,
+      logLevel: backendConfig.logLevel,
+      riotApiKeyLoaded: riotApiKeyDebug.loaded,
+      keyPrefix: riotApiKeyDebug.prefix,
+      keySuffix: riotApiKeyDebug.suffix,
+      databaseUrlLoaded: databaseUrlDebug.loaded,
+      note: "Changing backend/.env requires a backend restart.",
+      corsOrigins: backendConfig.corsOrigins,
+    });
+    logInfo("liga-backend listening.", {
+      url: `http://127.0.0.1:${backendConfig.port}`,
+    });
+
+    if (backendConfig.enableScheduler) {
+      statsScheduler.start();
+      logInfo("Stats scheduler enabled.", {
+        intervalHours: backendConfig.statsUpdateIntervalHours,
+        defaults: {
+          platformRegion: "eun1",
         routingRegion: "europe",
         queue: "RANKED_SOLO_5x5",
         tiers: ["CHALLENGER", "GRANDMASTER", "MASTER"],
-        limit: 200,
-        count: 20,
+        limit: 1000,
+        count: 80,
       },
-    });
-  } else {
-    console.info("[backend] Stats scheduler disabled.");
-  }
-});
+      });
+    } else {
+      logInfo("Stats scheduler disabled.");
+    }
+  });
+}
+
+void startServer();
 
 let shuttingDown = false;
 
@@ -87,13 +115,18 @@ async function gracefulShutdown(signal: string) {
   }
 
   shuttingDown = true;
-  console.info("[backend] graceful shutdown started.", { signal });
+  logInfo("Graceful shutdown started.", { signal });
   statsScheduler.stop();
+
+  if (!server) {
+    await prisma.$disconnect();
+    process.exit(0);
+  }
 
   server.close(async () => {
     try {
       await prisma.$disconnect();
-      console.info("[backend] Prisma disconnected.");
+      logInfo("Prisma disconnected.");
     } finally {
       process.exit(0);
     }

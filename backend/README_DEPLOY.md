@@ -15,37 +15,31 @@ Set these environment variables in Railway:
 - `RATE_LIMIT_WINDOW_MS`
 - `RATE_LIMIT_MAX_REQUESTS`
 
-## Important note about Prisma + SQLite
+## Prisma + PostgreSQL
 
-The current Prisma schema uses:
+The backend uses Railway PostgreSQL through:
 
-- `provider = "sqlite"`
-
-So on Railway you should attach a persistent volume and point `DATABASE_URL` to a file on that volume, for example:
+- `provider = "postgresql"`
+- `DATABASE_URL`
 
 ```env
-DATABASE_URL="file:/data/dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
 ```
 
-Without a persistent volume, the SQLite database will be ephemeral and analytics data will be lost on redeploy/restart.
+Use Railway's Postgres plugin/reference variable for `DATABASE_URL`. If `DATABASE_URL` is missing, `/health` reports the database as unavailable instead of pretending the backend is healthy.
 
 ## Recommended Railway setup
 
 1. Create a new Railway service from this repository.
 2. Set the service root to `backend/` or deploy only the `backend` folder.
-3. Add a persistent volume and mount it to:
-
-```txt
-/data
-```
-
+3. Add a Railway PostgreSQL database and expose its `DATABASE_URL` to the backend service.
 4. Set environment variables.
 
 Example:
 
 ```env
 PORT=8787
-DATABASE_URL="file:/data/dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
 RIOT_API_KEY=RGAPI-...
 CORS_ORIGINS=https://your-frontend-domain.com,http://127.0.0.1:1420,http://tauri.localhost
 ENABLE_SCHEDULER=false
@@ -59,13 +53,15 @@ RATE_LIMIT_MAX_REQUESTS=300
 The backend is configured so that:
 
 - build step compiles TypeScript
-- start step runs Prisma migrations and then starts the compiled server
+- start step generates Prisma client, deploys migrations, and then starts the compiled server
 
 Relevant scripts:
 
 ```json
 "build": "tsc -p tsconfig.json",
 "start": "node dist/server.js",
+"start:railway": "prisma generate && prisma migrate deploy && npm run start",
+"db:migrate": "prisma migrate deploy",
 "db:deploy": "prisma migrate deploy",
 "postinstall": "prisma generate"
 ```
@@ -73,7 +69,7 @@ Relevant scripts:
 `railway.json` uses:
 
 - build command: `npm install && npm run build`
-- start command: `npm run db:deploy && npm run start`
+- start command: `npm run start:railway`
 
 ## Health check
 
@@ -95,4 +91,3 @@ The endpoint returns:
 - `.env` should not be committed
 - Prisma client is generated automatically during install through `postinstall`
 - if you change env vars in Railway, redeploy or restart the service
-
