@@ -1,0 +1,23 @@
+{
+  "champion": "Ahri",
+  "roles": {
+    "middle": {
+      "stats": {
+        "winRate": 51.2,
+        "pickRate": 8.4,
+        "games": 12000
+      },
+      "summonerSpells": ["Flash", "Ignite"],
+      "runes": {
+        "primaryStyle": "Domination",
+        "subStyle": "Sorcery",
+        "selectedPerkIds": [8112, 8139, 8135, 8106, 8210, 8236, 5008, 5008, 5011]
+      },
+      "items": {
+        "start": ["Doran's Ring", "Health Potion"],
+        "core": ["Luden's Companion", "Shadowflame", "Rabadon's Deathcap"]
+      },
+      "skillOrder": ["Q", "W", "E"]
+    }
+  }
+}

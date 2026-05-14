@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model PatchCache {
+  id          String   @id @default(cuid())
+  patch       String   @unique
+  source      String
+  payload     String
+  fetchedAt   DateTime @default(now())
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ChampionStats {
+  id                String   @id @default(cuid())
+  patch             String
+  championId        Int
+  role              String
+  wins              Int
+  winRate           Float
+  pickRate          Float
+  banRate           Float?
+  gamesCount        Int
+  source            String
+  fetchedAt         DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([patch, championId, role, source])
+  @@index([patch, role])
+  @@index([championId, role])
+  @@index([source, patch, championId, role])
+}
+
+model RecommendationStats {
+  id                String   @id @default(cuid())
+  patch             String
+  championId        Int
+  role              String
+  label             String?
+  primaryStyleId    Int
+  subStyleId        Int
+  selectedPerkIds   String
+  summonerSpellIds  String
+  wins              Int
+  winRate           Float
+  pickRate          Float
+  gamesCount        Int
+  source            String
+  fetchedAt         DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([patch, championId, role, primaryStyleId, subStyleId, selectedPerkIds, summonerSpellIds, source])
+  @@index([patch, championId, role])
+  @@index([source, fetchedAt])
+  @@index([source, patch, championId, role])
+}
+
+model ItemStats {
+  id          String   @id @default(cuid())
+  patch       String
+  championId  Int
+  role        String
+  itemSetType String
+  itemSetKey  String
+  itemSetIds  String
+  wins        Int
+  winRate     Float?
+  pickRate    Float?
+  gamesCount  Int
+  matches     Int?
+  source      String
+  fetchedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([patch, championId, role, itemSetType, itemSetKey, source])
+  @@index([patch, championId, role])
+  @@index([source, patch, championId, role, itemSetType])
+}
+
+model MatchupStats {
+  id                 String   @id @default(cuid())
+  patch              String
+  championId         Int
+  opponentChampionId Int
+  role               String
+  wins               Int
+  winRate            Float
+  gamesCount         Int
+  source             String
+  fetchedAt          DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([patch, championId, opponentChampionId, role, source])
+  @@index([patch, championId, role])
+  @@index([source, patch, championId, role])
+}
+
+model MatchRecord {
+  id              String   @id @default(cuid())
+  riotMatchId     String   @unique
+  puuid           String
+  patch           String?
+  queueId         Int?
+  championId      Int
+  role            String?
+  win             Boolean
+  kills           Int?
+  deaths          Int?
+  assists         Int?
+  durationSeconds Int?
+  playedAt        DateTime?
+  rawPayload      String
+  fetchedAt       DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([puuid, playedAt])
+  @@index([championId, role])
+  @@index([puuid])
+  @@index([patch])
+  @@index([role])
+  @@index([patch, championId, role])
+}
+
+model TrackedAccount {
+  id             String   @id @default(cuid())
+  gameName       String
+  tagLine        String
+  puuid          String   @unique
+  platformRegion String
+  routingRegion  String
+  lastFetchedAt  DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([gameName, tagLine, platformRegion, routingRegion])
+  @@index([platformRegion, routingRegion])
+  @@index([lastFetchedAt])
+}
+
+model FetchJobLog {
+  id            String   @id @default(cuid())
+  jobName       String
+  status        String
+  target        String?
+  startedAt     DateTime @default(now())
+  finishedAt    DateTime?
+  durationMs    Int?
+  recordsRead   Int?
+  recordsSaved  Int?
+  errorMessage  String?
+  metadata      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([jobName, startedAt])
+  @@index([status, startedAt])
+}

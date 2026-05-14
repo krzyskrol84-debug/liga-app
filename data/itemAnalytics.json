@@ -1,0 +1,324 @@
+[
+  {
+    "champion": "Ahri",
+    "role": "middle",
+    "coreItems": [
+      {
+        "name": "Luden's Companion",
+        "description": "Primary burst spike for waveclear and picks."
+      },
+      {
+        "name": "Sorcerer's Shoes",
+        "description": "Early penetration for stronger mid-game trades."
+      },
+      {
+        "name": "Shadowflame",
+        "description": "Reliable second damage spike into squishier comps."
+      }
+    ],
+    "fourthItemOptions": [
+      {
+        "name": "Rabadon's Deathcap",
+        "description": "Highest late-game AP ceiling.",
+        "winRate": 54.1,
+        "matches": 18240
+      },
+      {
+        "name": "Zhonya's Hourglass",
+        "description": "Safer teamfight pattern into dive.",
+        "winRate": 52.9,
+        "matches": 14980
+      },
+      {
+        "name": "Stormsurge",
+        "description": "Extra burst for pick-heavy games.",
+        "winRate": 53.4,
+        "matches": 11670
+      }
+    ],
+    "fifthItemOptions": [
+      {
+        "name": "Void Staff",
+        "description": "Best answer into growing MR values.",
+        "winRate": 53.8,
+        "matches": 13820
+      },
+      {
+        "name": "Banshee's Veil",
+        "description": "Spell shield for engage-heavy matchups.",
+        "winRate": 52.7,
+        "matches": 9180
+      },
+      {
+        "name": "Cryptbloom",
+        "description": "Penetration with teamfight utility.",
+        "winRate": 53.1,
+        "matches": 8420
+      }
+    ],
+    "sixthItemOptions": [
+      {
+        "name": "Rabadon's Deathcap",
+        "description": "Premium capstone when not bought earlier.",
+        "winRate": 55,
+        "matches": 9610
+      },
+      {
+        "name": "Cosmic Drive",
+        "description": "Mobility and haste for longer skirmishes.",
+        "winRate": 52.4,
+        "matches": 6040
+      },
+      {
+        "name": "Liandry's Torment",
+        "description": "Better into durable frontlines.",
+        "winRate": 51.9,
+        "matches": 4980
+      }
+    ]
+  },
+  {
+    "champion": "Naafiri",
+    "role": "middle",
+    "items": [
+      {
+        "name": "Long Sword",
+        "description": "Flexible start into early lethality path."
+      },
+      {
+        "name": "Ionian Boots of Lucidity",
+        "description": "Ability haste for more frequent all-ins."
+      },
+      {
+        "name": "Eclipse",
+        "description": "Reliable burst and skirmish shield."
+      },
+      {
+        "name": "Serylda's Grudge",
+        "description": "Armor penetration and sticking power."
+      }
+    ]
+  },
+  {
+    "champion": "Darius",
+    "role": "top",
+    "items": [
+      {
+        "name": "Doran's Shield",
+        "description": "Safe lane opener into rough matchups."
+      },
+      {
+        "name": "Plated Steelcaps",
+        "description": "Efficient against heavy auto-attack lanes."
+      },
+      {
+        "name": "Black Cleaver",
+        "description": "Core bruiser spike with shred and haste."
+      },
+      {
+        "name": "Sterak's Gage",
+        "description": "Frontline durability for extended fights."
+      }
+    ]
+  },
+  {
+    "champion": "Lee Sin",
+    "role": "jungle",
+    "items": [
+      {
+        "name": "Scorchclaw Pup",
+        "description": "Aggressive jungle pet for early skirmishes."
+      },
+      {
+        "name": "Ionian Boots of Lucidity",
+        "description": "Low-cost haste spike for tempo plays."
+      },
+      {
+        "name": "Eclipse",
+        "description": "Early duel power and burst."
+      },
+      {
+        "name": "Black Cleaver",
+        "description": "Reliable bruiser transition for mid game."
+      }
+    ]
+  },
+  {
+    "champion": "Jinx",
+    "role": "bottom",
+    "coreItems": [
+      {
+        "name": "Infinity Edge",
+        "description": "Main crit spike for late-game carry damage."
+      },
+      {
+        "name": "Berserker's Greaves",
+        "description": "Attack speed breakpoint for smoother DPS."
+      },
+      {
+        "name": "Runaan's Hurricane",
+        "description": "Best default multi-target crit follow-up."
+      }
+    ],
+    "fourthItemOptions": [
+      {
+        "name": "Lord Dominik's Regards",
+        "description": "Most common armor penetration timing.",
+        "winRate": 53.2,
+        "matches": 22310
+      },
+      {
+        "name": "Rapid Firecannon",
+        "description": "Safer setup range and objective poke.",
+        "winRate": 52.6,
+        "matches": 16440
+      },
+      {
+        "name": "Bloodthirster",
+        "description": "More sustain in front-to-back fights.",
+        "winRate": 52.3,
+        "matches": 12290
+      }
+    ],
+    "fifthItemOptions": [
+      {
+        "name": "Bloodthirster",
+        "description": "Strong default lifesteal slot.",
+        "winRate": 53.7,
+        "matches": 14780
+      },
+      {
+        "name": "Guardian Angel",
+        "description": "Safer close-out against dive.",
+        "winRate": 52.8,
+        "matches": 10130
+      },
+      {
+        "name": "Mercurial Scimitar",
+        "description": "Cleanse access versus hard CC.",
+        "winRate": 52.1,
+        "matches": 6890
+      }
+    ],
+    "sixthItemOptions": [
+      {
+        "name": "Mortal Reminder",
+        "description": "Crit anti-heal finisher.",
+        "winRate": 53,
+        "matches": 8230
+      },
+      {
+        "name": "Immortal Shieldbow",
+        "description": "Extra survival in all-in games.",
+        "winRate": 51.9,
+        "matches": 5510
+      },
+      {
+        "name": "Yun Tal Wildarrows",
+        "description": "Greedy last-slot crit damage.",
+        "winRate": 52.5,
+        "matches": 4370
+      }
+    ]
+  },
+  {
+    "champion": "Thresh",
+    "role": "utility",
+    "coreItems": [
+      {
+        "name": "Locket of the Iron Solari",
+        "description": "Baseline teamfight protection."
+      },
+      {
+        "name": "Ionian Boots of Lucidity",
+        "description": "Cheap haste for hooks and lantern uptime."
+      },
+      {
+        "name": "Redemption",
+        "description": "Reliable mid-game utility follow-up."
+      }
+    ],
+    "fourthItemOptions": [
+      {
+        "name": "Knight's Vow",
+        "description": "Best peel option for one fed carry.",
+        "winRate": 52.7,
+        "matches": 11260
+      },
+      {
+        "name": "Mikael's Blessing",
+        "description": "Strong into pick and CC comps.",
+        "winRate": 53.1,
+        "matches": 9480
+      },
+      {
+        "name": "Shurelya's Battlesong",
+        "description": "Extra engage or disengage tempo.",
+        "winRate": 52.4,
+        "matches": 8210
+      }
+    ],
+    "fifthItemOptions": [
+      {
+        "name": "Zeke's Convergence",
+        "description": "Better when paired with engage carries.",
+        "winRate": 52.8,
+        "matches": 7340
+      },
+      {
+        "name": "Ardent Censer",
+        "description": "Useful when backing hypercarries.",
+        "winRate": 51.9,
+        "matches": 4830
+      },
+      {
+        "name": "Staff of Flowing Water",
+        "description": "Supportive haste/AP utility option.",
+        "winRate": 52.2,
+        "matches": 4510
+      }
+    ],
+    "sixthItemOptions": [
+      {
+        "name": "Dawncore",
+        "description": "Late utility capstone for support economy.",
+        "winRate": 53.4,
+        "matches": 3980
+      },
+      {
+        "name": "Frozen Heart",
+        "description": "Armor-heavy answer into auto attackers.",
+        "winRate": 52,
+        "matches": 3620
+      },
+      {
+        "name": "Abyssal Mask",
+        "description": "Frontline MR utility into magic damage.",
+        "winRate": 51.8,
+        "matches": 2870
+      }
+    ]
+  },
+  {
+    "champion": "Seraphine",
+    "role": "bottom",
+    "items": [
+      {
+        "name": "Doran's Ring",
+        "description": "Standard AP lane start."
+      },
+      {
+        "name": "Sorcerer's Shoes",
+        "description": "Early magic penetration for poke."
+      },
+      {
+        "name": "Blackfire Torch",
+        "description": "Consistent spell damage over longer fights."
+      },
+      {
+        "name": "Void Staff",
+        "description": "Efficient MR answer into scaling comps."
+      }
+    ]
+  }
+]

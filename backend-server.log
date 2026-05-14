@@ -1,0 +1,259 @@
+
+> liga-backend@0.1.0 start
+> node dist/server.js
+
+[backend] Environment loaded. {
+  envFilePath: 'C:\\Users\\krzys\\Desktop\\liga\\backend\\.env',
+  riotApiKeyLoaded: true,
+  keyPrefix: 'RGAPI-de',
+  keySuffix: 'fdd8',
+  note: 'Changing backend/.env requires a backend restart.',
+  corsOrigins: [
+    'http://127.0.0.1:1420',
+    'http://localhost:1420',
+    'http://tauri.localhost'
+  ]
+}
+liga-backend listening on http://127.0.0.1:8787
+[backend] Stats scheduler disabled.
+[backend] request {
+  method: 'GET',
+  path: '/',
+  statusCode: 200,
+  durationMs: 6,
+  ip: '::ffff:127.0.0.1'
+}
+[backend] request {
+  method: 'POST',
+  path: '/update-stats',
+  statusCode: 200,
+  durationMs: 62,
+  ip: '::ffff:127.0.0.1'
+}
+[backend] request {
+  method: 'POST',
+  path: '/analyze-global-stats',
+  statusCode: 200,
+  durationMs: 72,
+  ip: '::ffff:127.0.0.1'
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://eun1.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5',
+  target: 'RANKED_SOLO_5x5',
+  platformRegion: 'eun1',
+  routingRegion: undefined
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://eun1.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/RANKED_SOLO_5x5',
+  target: 'RANKED_SOLO_5x5',
+  platformRegion: 'eun1',
+  routingRegion: undefined
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://eun1.api.riotgames.com/lol/league/v4/masterleagues/by-queue/RANKED_SOLO_5x5',
+  target: 'RANKED_SOLO_5x5',
+  platformRegion: 'eun1',
+  routingRegion: undefined
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://europe.api.riotgames.com/riot/account/v1/accounts/by-puuid/C2FOaGM_EYdSStVS23uoRiOd3i6TlN22V7vcF5rWN6N_18XYYLwxjVNdHBnbZ4cMY1Y9DzaGLVgrhw',
+  target: 'C2FOaGM_EYdSStVS23uoRiOd3i6TlN22V7vcF5rWN6N_18XYYLwxjVNdHBnbZ4cMY1Y9DzaGLVgrhw',
+  platformRegion: 'eun1',
+  routingRegion: 'europe'
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://europe.api.riotgames.com/riot/account/v1/accounts/by-puuid/ZTLWbwLIg1RaEMjWbcm3w9JHTSpuSW0P6cPquyhOgw_qn12ECbl-9WpnxnsuO6-Nc8GiNcj1jt1viA',
+  target: 'ZTLWbwLIg1RaEMjWbcm3w9JHTSpuSW0P6cPquyhOgw_qn12ECbl-9WpnxnsuO6-Nc8GiNcj1jt1viA',
+  platformRegion: 'eun1',
+  routingRegion: 'europe'
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://europe.api.riotgames.com/riot/account/v1/accounts/by-puuid/h5462xLZjiaSmHtjZTOLH2ScbnC-taG4lbqIGJCEsUTrJX2sYQhhKPfEc7mEjYIA4IToCKso0ZeGuQ',
+  target: 'h5462xLZjiaSmHtjZTOLH2ScbnC-taG4lbqIGJCEsUTrJX2sYQhhKPfEc7mEjYIA4IToCKso0ZeGuQ',
+  platformRegion: 'eun1',
+  routingRegion: 'europe'
+}
+[backend] request {
+  method: 'POST',
+  path: '/seed-ranked-accounts',
+  statusCode: 200,
+  durationMs: 4820,
+  ip: '::ffff:127.0.0.1'
+}
+[backend] request {
+  method: 'GET',
+  path: '/',
+  statusCode: 200,
+  durationMs: 2,
+  ip: '::ffff:127.0.0.1'
+}
+[backend] request {
+  method: 'GET',
+  path: '/',
+  statusCode: 200,
+  durationMs: 31,
+  ip: '::ffff:127.0.0.1'
+}
+[backend] request {
+  method: 'POST',
+  path: '/update-stats',
+  statusCode: 429,
+  durationMs: 1,
+  ip: '::ffff:127.0.0.1'
+}
+[backend] request {
+  method: 'GET',
+  path: '/',
+  statusCode: 200,
+  durationMs: 9,
+  ip: '::ffff:127.0.0.1'
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://eun1.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5',
+  target: 'RANKED_SOLO_5x5',
+  platformRegion: 'eun1',
+  routingRegion: undefined
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://eun1.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/RANKED_SOLO_5x5',
+  target: 'RANKED_SOLO_5x5',
+  platformRegion: 'eun1',
+  routingRegion: undefined
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://eun1.api.riotgames.com/lol/league/v4/masterleagues/by-queue/RANKED_SOLO_5x5',
+  target: 'RANKED_SOLO_5x5',
+  platformRegion: 'eun1',
+  routingRegion: undefined
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/h5462xLZjiaSmHtjZTOLH2ScbnC-taG4lbqIGJCEsUTrJX2sYQhhKPfEc7mEjYIA4IToCKso0ZeGuQ/ids?count=1',
+  target: 'h5462xLZjiaSmHtjZTOLH2ScbnC-taG4lbqIGJCEsUTrJX2sYQhhKPfEc7mEjYIA4IToCKso0ZeGuQ',
+  platformRegion: undefined,
+  routingRegion: 'europe'
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://europe.api.riotgames.com/lol/match/v5/matches/EUN1_3951406001',
+  target: 'EUN1_3951406001',
+  platformRegion: undefined,
+  routingRegion: 'europe'
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/ZTLWbwLIg1RaEMjWbcm3w9JHTSpuSW0P6cPquyhOgw_qn12ECbl-9WpnxnsuO6-Nc8GiNcj1jt1viA/ids?count=1',
+  target: 'ZTLWbwLIg1RaEMjWbcm3w9JHTSpuSW0P6cPquyhOgw_qn12ECbl-9WpnxnsuO6-Nc8GiNcj1jt1viA',
+  platformRegion: undefined,
+  routingRegion: 'europe'
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://europe.api.riotgames.com/lol/match/v5/matches/EUN1_3951305121',
+  target: 'EUN1_3951305121',
+  platformRegion: undefined,
+  routingRegion: 'europe'
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/C2FOaGM_EYdSStVS23uoRiOd3i6TlN22V7vcF5rWN6N_18XYYLwxjVNdHBnbZ4cMY1Y9DzaGLVgrhw/ids?count=1',
+  target: 'C2FOaGM_EYdSStVS23uoRiOd3i6TlN22V7vcF5rWN6N_18XYYLwxjVNdHBnbZ4cMY1Y9DzaGLVgrhw',
+  platformRegion: undefined,
+  routingRegion: 'europe'
+}
+[RiotApiClient] {
+  message: 'Riot API request succeeded.',
+  status: 200,
+  attempt: 1,
+  method: 'GET',
+  url: 'https://europe.api.riotgames.com/lol/match/v5/matches/EUN1_3951387678',
+  target: 'EUN1_3951387678',
+  platformRegion: undefined,
+  routingRegion: 'europe'
+}
+[backend] request {
+  method: 'POST',
+  path: '/full-refresh',
+  statusCode: 200,
+  durationMs: 6121,
+  ip: '::ffff:127.0.0.1'
+}
+[backend] request {
+  method: 'GET',
+  path: '/',
+  statusCode: 200,
+  durationMs: 1,
+  ip: '::ffff:127.0.0.1'
+}
+[backend] request {
+  method: 'GET',
+  path: '/',
+  statusCode: 200,
+  durationMs: 8,
+  ip: '::ffff:127.0.0.1'
+}
+[backend] request {
+  method: 'GET',
+  path: '/',
+  statusCode: 200,
+  durationMs: 1,
+  ip: '::ffff:127.0.0.1'
+}
+[backend] request {
+  method: 'GET',
+  path: '/',
+  statusCode: 200,
+  durationMs: 8,
+  ip: '::ffff:127.0.0.1'
+}

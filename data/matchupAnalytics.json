@@ -1,0 +1,78 @@
+[
+  {
+    "champion": "Ahri",
+    "role": "middle",
+    "toughestMatchups": [
+      { "champion": "Galio", "role": "middle", "winRate": 53.8, "pickRate": 6.2, "gamesCount": 18420, "label": "Anti-burst control" },
+      { "champion": "Kassadin", "role": "middle", "winRate": 52.9, "pickRate": 4.7, "gamesCount": 14380, "label": "Scaling counter" },
+      { "champion": "Lissandra", "role": "middle", "winRate": 52.4, "pickRate": 3.5, "gamesCount": 9810, "label": "Lockdown punish" }
+    ],
+    "bestPicks": [
+      { "champion": "Ahri", "role": "middle", "winRate": 52.3, "pickRate": 8.1, "gamesCount": 45210, "label": "Most Popular" },
+      { "champion": "Anivia", "role": "middle", "winRate": 53.1, "pickRate": 4.2, "gamesCount": 22880, "label": "Control mage" },
+      { "champion": "Sylas", "role": "middle", "winRate": 52.8, "pickRate": 7.3, "gamesCount": 33640, "label": "Skirmish carry" }
+    ],
+    "worstPicks": [
+      { "champion": "Ryze", "role": "middle", "winRate": 47.9, "pickRate": 2.4, "gamesCount": 8410, "label": "Weak solo queue conversion" },
+      { "champion": "Corki", "role": "middle", "winRate": 48.3, "pickRate": 3.1, "gamesCount": 11290, "label": "Scaling but inconsistent" },
+      { "champion": "Azir", "role": "middle", "winRate": 48.7, "pickRate": 5.5, "gamesCount": 17640, "label": "Execution heavy" }
+    ]
+  },
+  {
+    "champion": "Naafiri",
+    "role": "middle",
+    "toughestMatchups": [
+      { "champion": "Vex", "role": "middle", "winRate": 53.4, "pickRate": 5.9, "gamesCount": 15110, "label": "Anti-dash punish" },
+      { "champion": "Taliyah", "role": "middle", "winRate": 52.7, "pickRate": 3.6, "gamesCount": 8940, "label": "Zone control" },
+      { "champion": "Pantheon", "role": "middle", "winRate": 52.1, "pickRate": 2.7, "gamesCount": 6210, "label": "Early lane denial" }
+    ],
+    "bestPicks": [
+      { "champion": "Naafiri", "role": "middle", "winRate": 52.6, "pickRate": 4.3, "gamesCount": 20440, "label": "Best Win Rate" },
+      { "champion": "Talon", "role": "middle", "winRate": 52.1, "pickRate": 3.9, "gamesCount": 18320, "label": "Roaming assassin" },
+      { "champion": "Ahri", "role": "middle", "winRate": 52.3, "pickRate": 8.1, "gamesCount": 45210, "label": "Blind pick stable" }
+    ],
+    "worstPicks": [
+      { "champion": "Yasuo", "role": "middle", "winRate": 48.6, "pickRate": 8.8, "gamesCount": 39110, "label": "Volatile results" },
+      { "champion": "Qiyana", "role": "middle", "winRate": 48.9, "pickRate": 2.9, "gamesCount": 7340, "label": "Snowball dependent" },
+      { "champion": "Zed", "role": "middle", "winRate": 49.2, "pickRate": 7.1, "gamesCount": 30180, "label": "Execution dependent" }
+    ]
+  },
+  {
+    "champion": "Darius",
+    "role": "top",
+    "toughestMatchups": [
+      { "champion": "Quinn", "role": "top", "winRate": 53.7, "pickRate": 2.6, "gamesCount": 6110, "label": "Ranged lane pressure" },
+      { "champion": "Vayne", "role": "top", "winRate": 53.1, "pickRate": 2.1, "gamesCount": 5200, "label": "Kiting counter" },
+      { "champion": "Teemo", "role": "top", "winRate": 51.9, "pickRate": 3.3, "gamesCount": 9890, "label": "Harass lane" }
+    ],
+    "bestPicks": [
+      { "champion": "Darius", "role": "top", "winRate": 51.8, "pickRate": 7.2, "gamesCount": 41810, "label": "Lane bully" },
+      { "champion": "Sett", "role": "top", "winRate": 51.6, "pickRate": 6.8, "gamesCount": 39610, "label": "Reliable brawler" },
+      { "champion": "Garen", "role": "top", "winRate": 51.4, "pickRate": 6.5, "gamesCount": 37720, "label": "Simple execution" }
+    ],
+    "worstPicks": [
+      { "champion": "K'Sante", "role": "top", "winRate": 47.8, "pickRate": 5.4, "gamesCount": 16440, "label": "Low conversion" },
+      { "champion": "Jayce", "role": "top", "winRate": 48.4, "pickRate": 4.8, "gamesCount": 14110, "label": "Skill-sensitive" },
+      { "champion": "Gangplank", "role": "top", "winRate": 48.9, "pickRate": 4.1, "gamesCount": 12670, "label": "Scaling variance" }
+    ]
+  },
+  {
+    "champion": "Lee Sin",
+    "role": "jungle",
+    "toughestMatchups": [
+      { "champion": "Poppy", "role": "jungle", "winRate": 53.2, "pickRate": 4.2, "gamesCount": 12990, "label": "Dash denial" },
+      { "champion": "Rammus", "role": "jungle", "winRate": 52.8, "pickRate": 3.1, "gamesCount": 8840, "label": "Anti-AD engage" },
+      { "champion": "Ivern", "role": "jungle", "winRate": 52.5, "pickRate": 2.4, "gamesCount": 7030, "label": "Tempo utility" }
+    ],
+    "bestPicks": [
+      { "champion": "Lee Sin", "role": "jungle", "winRate": 51.9, "pickRate": 9.2, "gamesCount": 48210, "label": "Tempo skirmisher" },
+      { "champion": "Viego", "role": "jungle", "winRate": 52.1, "pickRate": 8.5, "gamesCount": 45190, "label": "Reset carry" },
+      { "champion": "Xin Zhao", "role": "jungle", "winRate": 51.7, "pickRate": 5.7, "gamesCount": 26840, "label": "Early pressure" }
+    ],
+    "worstPicks": [
+      { "champion": "Nidalee", "role": "jungle", "winRate": 48.2, "pickRate": 2.8, "gamesCount": 7420, "label": "Execution heavy" },
+      { "champion": "Elise", "role": "jungle", "winRate": 48.7, "pickRate": 2.1, "gamesCount": 5950, "label": "Snowball required" },
+      { "champion": "Kha'Zix", "role": "jungle", "winRate": 49.0, "pickRate": 6.1, "gamesCount": 23110, "label": "Volatile solo queue" }
+    ]
+  }
+]

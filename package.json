@@ -1,0 +1,41 @@
+{
+  "name": "liga",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "dev:vite": "vite --host 127.0.0.1 --port 1420",
+    "build": "tauri build",
+    "build:frontend": "tsc && vite build",
+    "build:installer": "npm run version:sync && tauri build --bundles nsis",
+    "preview": "vite preview",
+    "release": "npm run version:sync && npm run typecheck && npm run typecheck:node && npm run build:installer",
+    "sign:windows": "powershell -ExecutionPolicy Bypass -File scripts/sign-windows.ps1",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "typecheck:node": "tsc --project tsconfig.node.json",
+    "version:sync": "node scripts/sync-version.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "axios": "^1.16.1",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@rolldown/plugin-babel": "^0.2.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "@tauri-apps/cli": "^2.0.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^5.5.4",
+    "vite": "^8.0.12",
+    "vitest": "^4.1.6"
+  }
+}

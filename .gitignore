@@ -1,0 +1,10 @@
+﻿.env
+backend/.env
+*.zip
+node_modules
+backend/node_modules
+dist
+build
+src-tauri/target
+backend/prisma/dev.db
+.continue/

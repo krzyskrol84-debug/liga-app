@@ -1,0 +1,6 @@
+{
+  "autoApplyRunes": false,
+  "autoApplySummonerSpells": false,
+  "requireConfirmation": true,
+  "pollIntervalMs": 1000
+}

@@ -1,0 +1,3811 @@
+[
+  {
+    "champion": "Ahri",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8112,
+      8139,
+      8135,
+      8106,
+      8226,
+      8236,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.2,
+    "pickRate": 8.4,
+    "gamesCount": 12000,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Darius",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8299,
+      8444,
+      8451,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      6
+    ],
+    "winRate": 50.8,
+    "pickRate": 7.1,
+    "gamesCount": 9800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Lux",
+    "role": "utility",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8139,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.4,
+    "pickRate": 10.6,
+    "gamesCount": 15600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Jinx",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8008,
+      8009,
+      9104,
+      8014,
+      8226,
+      8236,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 51.6,
+    "pickRate": 12.3,
+    "gamesCount": 18400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Lee Sin",
+    "role": "jungle",
+    "primaryStyle": "Precision",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8014,
+      8304,
+      8347,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 49.7,
+    "pickRate": 14.8,
+    "gamesCount": 22100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Yasuo",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8008,
+      9111,
+      9104,
+      8299,
+      8473,
+      8451,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.9,
+    "pickRate": 9.9,
+    "gamesCount": 14300,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Garen",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8299,
+      8444,
+      8451,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.9,
+    "pickRate": 6.8,
+    "gamesCount": 9100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Caitlyn",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8021,
+      8009,
+      9104,
+      8014,
+      8233,
+      8236,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 50.6,
+    "pickRate": 11.7,
+    "gamesCount": 16900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Thresh",
+    "role": "utility",
+    "primaryStyle": "Resolve",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8439,
+      8463,
+      8473,
+      8451,
+      8304,
+      8347,
+      5007,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.1,
+    "pickRate": 8.9,
+    "gamesCount": 13200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Leona",
+    "role": "utility",
+    "primaryStyle": "Resolve",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8439,
+      8463,
+      8473,
+      8451,
+      8304,
+      8347,
+      5007,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.3,
+    "pickRate": 7.5,
+    "gamesCount": 10400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Akali",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      8009,
+      9105,
+      8299,
+      8473,
+      8451,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.8,
+    "pickRate": 7.6,
+    "gamesCount": 11200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Ezreal",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8005,
+      8009,
+      9105,
+      8014,
+      8304,
+      8347,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 50.2,
+    "pickRate": 16.4,
+    "gamesCount": 24500,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Vi",
+    "role": "jungle",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8014,
+      8143,
+      8106,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 51,
+    "pickRate": 5.4,
+    "gamesCount": 7600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Riven",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8299,
+      8210,
+      8236,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50,
+    "pickRate": 5.9,
+    "gamesCount": 8300,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Orianna",
+    "role": "middle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8236,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 50.9,
+    "pickRate": 5.8,
+    "gamesCount": 7900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Nami",
+    "role": "utility",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8237,
+      8463,
+      8453,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 51.5,
+    "pickRate": 6.1,
+    "gamesCount": 8700,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Kai'Sa",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8008,
+      8009,
+      9104,
+      8014,
+      8304,
+      8347,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 50.7,
+    "pickRate": 13.2,
+    "gamesCount": 19800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Viego",
+    "role": "jungle",
+    "primaryStyle": "Precision",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8014,
+      8304,
+      8347,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 50.5,
+    "pickRate": 9.1,
+    "gamesCount": 13700,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Malphite",
+    "role": "top",
+    "primaryStyle": "Resolve",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8437,
+      8446,
+      8429,
+      8451,
+      8226,
+      8210,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 51.8,
+    "pickRate": 6.5,
+    "gamesCount": 9400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "champion": "Syndra",
+    "role": "middle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 50.3,
+    "pickRate": 6.7,
+    "gamesCount": 9600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "naafiri-mid-best-win-rate",
+    "label": "Best Win Rate",
+    "championId": 950,
+    "champion": "Naafiri",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      9111,
+      8014,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 53.2,
+    "pickRate": 5.4,
+    "gamesCount": 9100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "naafiri-mid-most-popular",
+    "label": "Most Popular",
+    "championId": 950,
+    "champion": "Naafiri",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      8236,
+      8210,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.8,
+    "pickRate": 11.7,
+    "gamesCount": 22100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "naafiri-mid-aggressive",
+    "label": "Aggressive",
+    "championId": 950,
+    "champion": "Naafiri",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8112,
+      8126,
+      8135,
+      8106,
+      9111,
+      8014,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 52.4,
+    "pickRate": 4.9,
+    "gamesCount": 7400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "naafiri-mid-safe-scaling",
+    "label": "Safe Scaling",
+    "championId": 950,
+    "champion": "Naafiri",
+    "role": "middle",
+    "fallback": true,
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8299,
+      8473,
+      8451,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 51.1,
+    "pickRate": 3.8,
+    "gamesCount": 5300,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "brand-support-most-popular",
+    "label": "Most Popular",
+    "championId": 63,
+    "champion": "Brand",
+    "role": "utility",
+    "primaryStyle": "Domination",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8128,
+      8126,
+      8135,
+      8106,
+      8226,
+      8237,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.7,
+    "pickRate": 8.9,
+    "gamesCount": 17400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "brand-support-safe",
+    "label": "Safe Scaling",
+    "championId": 63,
+    "champion": "Brand",
+    "role": "utility",
+    "fallback": true,
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 50.8,
+    "pickRate": 3.6,
+    "gamesCount": 7200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "brand-apc-best-win-rate",
+    "label": "Best Win Rate",
+    "championId": 63,
+    "champion": "Brand",
+    "role": "bottom",
+    "primaryStyle": "Domination",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8128,
+      8126,
+      8135,
+      8106,
+      8226,
+      8237,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 53.9,
+    "pickRate": 2.1,
+    "gamesCount": 4100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "seraphine-apc-most-popular",
+    "label": "Most Popular",
+    "championId": 147,
+    "champion": "Seraphine",
+    "role": "bottom",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8237,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 52.8,
+    "pickRate": 3.8,
+    "gamesCount": 6800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "seraphine-apc-safe-scaling",
+    "label": "Safe Scaling",
+    "championId": 147,
+    "champion": "Seraphine",
+    "role": "bottom",
+    "fallback": true,
+    "primaryStyle": "Sorcery",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8237,
+      8463,
+      8453,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 52.1,
+    "pickRate": 2.7,
+    "gamesCount": 5200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "seraphine-support-aery",
+    "label": "Most Popular",
+    "championId": 147,
+    "champion": "Seraphine",
+    "role": "utility",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8237,
+      8463,
+      8453,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 50.9,
+    "pickRate": 5.1,
+    "gamesCount": 9400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "pantheon-top-aggressive",
+    "label": "Aggressive",
+    "championId": 80,
+    "champion": "Pantheon",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8014,
+      8143,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.4,
+    "pickRate": 4.8,
+    "gamesCount": 8500,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "pantheon-mid-best-win-rate",
+    "label": "Best Win Rate",
+    "championId": 80,
+    "champion": "Pantheon",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8014,
+      8143,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 52.6,
+    "pickRate": 2.9,
+    "gamesCount": 4900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "pantheon-support-roam",
+    "label": "Roaming",
+    "championId": 80,
+    "champion": "Pantheon",
+    "role": "utility",
+    "fallback": true,
+    "primaryStyle": "Precision",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8014,
+      8304,
+      8347,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.2,
+    "pickRate": 3.4,
+    "gamesCount": 6100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "swain-support-most-popular",
+    "label": "Most Popular",
+    "championId": 50,
+    "champion": "Swain",
+    "role": "utility",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8005,
+      8009,
+      9105,
+      8014,
+      8473,
+      8451,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51,
+    "pickRate": 4.7,
+    "gamesCount": 8300,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "swain-apc-best-win-rate",
+    "label": "Best Win Rate",
+    "championId": 50,
+    "champion": "Swain",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8005,
+      8009,
+      9105,
+      8014,
+      8226,
+      8237,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 53.1,
+    "pickRate": 2.4,
+    "gamesCount": 4700,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "gragas-jungle-most-popular",
+    "label": "Most Popular",
+    "championId": 79,
+    "champion": "Gragas",
+    "role": "jungle",
+    "primaryStyle": "Domination",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8128,
+      8143,
+      8135,
+      8106,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 50.6,
+    "pickRate": 6.3,
+    "gamesCount": 11800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "gragas-top-safe",
+    "label": "Safe Scaling",
+    "championId": 79,
+    "champion": "Gragas",
+    "role": "top",
+    "fallback": true,
+    "primaryStyle": "Resolve",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8437,
+      8446,
+      8429,
+      8451,
+      8304,
+      8347,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 51.2,
+    "pickRate": 3.1,
+    "gamesCount": 5400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "morgana-support-most-popular",
+    "label": "Most Popular",
+    "championId": 25,
+    "champion": "Morgana",
+    "role": "utility",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 50.5,
+    "pickRate": 6.9,
+    "gamesCount": 12100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "morgana-jungle-offmeta",
+    "label": "Off Meta",
+    "championId": 25,
+    "champion": "Morgana",
+    "role": "jungle",
+    "primaryStyle": "Domination",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8128,
+      8126,
+      8135,
+      8106,
+      8226,
+      8237,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 49.8,
+    "pickRate": 1.2,
+    "gamesCount": 1900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "tristana-adc-most-popular",
+    "label": "Most Popular",
+    "championId": 18,
+    "champion": "Tristana",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8008,
+      8009,
+      9104,
+      8014,
+      8139,
+      8106,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 50.7,
+    "pickRate": 7.2,
+    "gamesCount": 13200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "tristana-mid-aggressive",
+    "label": "Aggressive",
+    "championId": 18,
+    "champion": "Tristana",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8008,
+      8009,
+      9104,
+      8014,
+      8139,
+      8106,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.5,
+    "pickRate": 3.5,
+    "gamesCount": 6400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "ahri-mid-domination-dps",
+    "label": "High DPS",
+    "championId": 103,
+    "champion": "Ahri",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8112,
+      8126,
+      8135,
+      8106,
+      8021,
+      8014,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.5,
+    "pickRate": 4.2,
+    "gamesCount": 6200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "ahri-mid-control",
+    "label": "Control",
+    "championId": 103,
+    "champion": "Ahri",
+    "role": "middle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8229,
+      8234,
+      8210,
+      8237,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 49.8,
+    "pickRate": 3.7,
+    "gamesCount": 5800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "ahri-mid-apc",
+    "label": "AP Carry",
+    "championId": 103,
+    "champion": "Ahri",
+    "role": "middle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8126,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 51.1,
+    "pickRate": 2.9,
+    "gamesCount": 4300,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "darius-top-fight",
+    "label": "Fighter",
+    "championId": 122,
+    "champion": "Darius",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8299,
+      8444,
+      8451,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      6
+    ],
+    "winRate": 50.4,
+    "pickRate": 5.3,
+    "gamesCount": 7100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "darius-top-tank",
+    "label": "Tanky",
+    "championId": 122,
+    "champion": "Darius",
+    "role": "top",
+    "primaryStyle": "Resolve",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8437,
+      8446,
+      8429,
+      8451,
+      8014,
+      8009,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.3,
+    "pickRate": 4.8,
+    "gamesCount": 6500,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "darius-top-dominator",
+    "label": "Dominator",
+    "championId": 122,
+    "champion": "Darius",
+    "role": "top",
+    "primaryStyle": "Domination",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8112,
+      8139,
+      8135,
+      8106,
+      8444,
+      8451,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.7,
+    "pickRate": 3.2,
+    "gamesCount": 4200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "lux-mid-control",
+    "label": "Control",
+    "championId": 99,
+    "champion": "Lux",
+    "role": "middle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8229,
+      8210,
+      8237,
+      8236,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 50.3,
+    "pickRate": 4.6,
+    "gamesCount": 6100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "lux-mid-apc",
+    "label": "AP Carry",
+    "championId": 99,
+    "champion": "Lux",
+    "role": "middle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8139,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 51.5,
+    "pickRate": 3.8,
+    "gamesCount": 5400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "lux-support",
+    "label": "Support",
+    "championId": 99,
+    "champion": "Lux",
+    "role": "utility",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8229,
+      8210,
+      8237,
+      8236,
+      8463,
+      8453,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 50.7,
+    "pickRate": 5.9,
+    "gamesCount": 7800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "jinx-bottom-ranged",
+    "label": "Ranged Focus",
+    "championId": 222,
+    "champion": "Jinx",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8008,
+      8009,
+      9104,
+      8014,
+      8126,
+      8106,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 50.9,
+    "pickRate": 6.4,
+    "gamesCount": 9200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "jinx-bottom-aggressive",
+    "label": "Aggressive",
+    "championId": 222,
+    "champion": "Jinx",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8021,
+      8009,
+      9104,
+      8014,
+      8304,
+      8347,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 51.2,
+    "pickRate": 5.1,
+    "gamesCount": 7600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "jinx-apc",
+    "label": "AP Carry",
+    "championId": 222,
+    "champion": "Jinx",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8008,
+      8009,
+      9104,
+      8014,
+      8226,
+      8236,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 49.1,
+    "pickRate": 2.3,
+    "gamesCount": 3400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "leesin-jungle-assassin",
+    "label": "Assassin",
+    "championId": 64,
+    "champion": "Lee Sin",
+    "role": "jungle",
+    "primaryStyle": "Domination",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      8014,
+      9111,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 50.5,
+    "pickRate": 6.7,
+    "gamesCount": 9800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "leesin-jungle-fight",
+    "label": "Fighter",
+    "championId": 64,
+    "champion": "Lee Sin",
+    "role": "jungle",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8014,
+      8444,
+      8451,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 50.1,
+    "pickRate": 5.2,
+    "gamesCount": 7500,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "leesin-jungle-sustain",
+    "label": "Sustainable",
+    "championId": 64,
+    "champion": "Lee Sin",
+    "role": "jungle",
+    "primaryStyle": "Precision",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8014,
+      8304,
+      8347,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 49.8,
+    "pickRate": 4.1,
+    "gamesCount": 5900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "yasuo-mid-airblade",
+    "label": "Airblade",
+    "championId": 157,
+    "champion": "Yasuo",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8008,
+      9111,
+      9104,
+      8014,
+      8304,
+      8347,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.3,
+    "pickRate": 5.7,
+    "gamesCount": 8100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "yasuo-mid-offensive",
+    "label": "Offensive",
+    "championId": 157,
+    "champion": "Yasuo",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8008,
+      9111,
+      9105,
+      8014,
+      8139,
+      8106,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.2,
+    "pickRate": 4.3,
+    "gamesCount": 6200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "yasuo-top-defensive",
+    "label": "Defensive",
+    "championId": 157,
+    "champion": "Yasuo",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8299,
+      8444,
+      8451,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 48.7,
+    "pickRate": 3.1,
+    "gamesCount": 4500,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "garen-top-tank",
+    "label": "Tank",
+    "championId": 86,
+    "champion": "Garen",
+    "role": "top",
+    "primaryStyle": "Resolve",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8437,
+      8446,
+      8429,
+      8451,
+      8014,
+      8009,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 52.1,
+    "pickRate": 5.2,
+    "gamesCount": 7100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "garen-top-offensive",
+    "label": "Offensive",
+    "championId": 86,
+    "champion": "Garen",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8299,
+      8444,
+      8451,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.6,
+    "pickRate": 4.7,
+    "gamesCount": 6400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "garen-top-attack",
+    "label": "Attack-focused",
+    "championId": 86,
+    "champion": "Garen",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8008,
+      9111,
+      9104,
+      8014,
+      8126,
+      8139,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      6
+    ],
+    "winRate": 50.8,
+    "pickRate": 3.9,
+    "gamesCount": 5300,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "caitlyn-bottom-poke",
+    "label": "Poke",
+    "championId": 51,
+    "champion": "Caitlyn",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8021,
+      8009,
+      9104,
+      8014,
+      8210,
+      8236,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 50.4,
+    "pickRate": 5.8,
+    "gamesCount": 8400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "caitlyn-bottom-critical",
+    "label": "Critical",
+    "championId": 51,
+    "champion": "Caitlyn",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8021,
+      8009,
+      9105,
+      8014,
+      8304,
+      8347,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 50.9,
+    "pickRate": 5.2,
+    "gamesCount": 7600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "thresh-jungle",
+    "label": "Jungle",
+    "championId": 412,
+    "champion": "Thresh",
+    "role": "jungle",
+    "primaryStyle": "Resolve",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8439,
+      8463,
+      8473,
+      8451,
+      8304,
+      8347,
+      5007,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 48.2,
+    "pickRate": 1.8,
+    "gamesCount": 2600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "leona-jungle",
+    "label": "Jungle",
+    "championId": 89,
+    "champion": "Leona",
+    "role": "jungle",
+    "primaryStyle": "Resolve",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8439,
+      8463,
+      8473,
+      8451,
+      8304,
+      8347,
+      5007,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 47.8,
+    "pickRate": 1.5,
+    "gamesCount": 2100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "akali-top-melee",
+    "label": "Melee",
+    "championId": 84,
+    "champion": "Akali",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      8009,
+      9105,
+      8299,
+      8473,
+      8451,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.1,
+    "pickRate": 2.7,
+    "gamesCount": 4100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "akali-apc",
+    "label": "AP Carry",
+    "championId": 84,
+    "champion": "Akali",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8010,
+      8009,
+      9105,
+      8014,
+      8226,
+      8237,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 50.6,
+    "pickRate": 4.1,
+    "gamesCount": 6200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "ezreal-middle",
+    "label": "Mage",
+    "championId": 81,
+    "champion": "Ezreal",
+    "role": "middle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 49.5,
+    "pickRate": 3.8,
+    "gamesCount": 5700,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "ezreal-support",
+    "label": "Support",
+    "championId": 81,
+    "champion": "Ezreal",
+    "role": "utility",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8005,
+      8009,
+      9105,
+      8014,
+      8226,
+      8236,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 48.9,
+    "pickRate": 2.9,
+    "gamesCount": 4200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "vi-top",
+    "label": "Top",
+    "championId": 254,
+    "champion": "Vi",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8014,
+      8444,
+      8451,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.3,
+    "pickRate": 3.4,
+    "gamesCount": 4800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "riven-top-offensive",
+    "label": "Offensive",
+    "championId": 92,
+    "champion": "Riven",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8014,
+      8139,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.8,
+    "pickRate": 5.1,
+    "gamesCount": 7200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "riven-top-burst",
+    "label": "Burst",
+    "championId": 92,
+    "champion": "Riven",
+    "role": "top",
+    "primaryStyle": "Domination",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8112,
+      8126,
+      8135,
+      8106,
+      8014,
+      9111,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.7,
+    "pickRate": 4.2,
+    "gamesCount": 5900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "riven-middle",
+    "label": "Mid",
+    "championId": 92,
+    "champion": "Riven",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8299,
+      8210,
+      8236,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 48.6,
+    "pickRate": 2.7,
+    "gamesCount": 3800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "orianna-top",
+    "label": "Top",
+    "championId": 61,
+    "champion": "Orianna",
+    "role": "top",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8236,
+      8463,
+      8453,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 47.9,
+    "pickRate": 2.1,
+    "gamesCount": 3100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "nami-jungle",
+    "label": "Jungle",
+    "championId": 267,
+    "champion": "Nami",
+    "role": "jungle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8237,
+      8463,
+      8453,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 46.5,
+    "pickRate": 1.3,
+    "gamesCount": 1900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "kaisa-middle",
+    "label": "Mid",
+    "championId": 145,
+    "champion": "Kai'Sa",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8008,
+      8009,
+      9104,
+      8014,
+      8226,
+      8236,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 48.3,
+    "pickRate": 3.2,
+    "gamesCount": 4700,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "kaisa-top",
+    "label": "Top",
+    "championId": 145,
+    "champion": "Kai'Sa",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8008,
+      8009,
+      9104,
+      8014,
+      8304,
+      8347,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 47.1,
+    "pickRate": 2.4,
+    "gamesCount": 3500,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "viego-top",
+    "label": "Top",
+    "championId": 234,
+    "champion": "Viego",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8014,
+      8143,
+      8106,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.2,
+    "pickRate": 3.8,
+    "gamesCount": 5400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "viego-middle",
+    "label": "Mid",
+    "championId": 234,
+    "champion": "Viego",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8014,
+      8444,
+      8451,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 48.7,
+    "pickRate": 3.1,
+    "gamesCount": 4500,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "malphite-middle",
+    "label": "Mid",
+    "championId": 54,
+    "champion": "Malphite",
+    "role": "middle",
+    "primaryStyle": "Resolve",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8437,
+      8446,
+      8429,
+      8451,
+      8226,
+      8210,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 49.4,
+    "pickRate": 2.8,
+    "gamesCount": 4100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "malphite-jungle",
+    "label": "Jungle",
+    "championId": 54,
+    "champion": "Malphite",
+    "role": "jungle",
+    "primaryStyle": "Resolve",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8437,
+      8446,
+      8429,
+      8451,
+      8304,
+      8347,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 48.9,
+    "pickRate": 2.3,
+    "gamesCount": 3300,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "syndra-jungle",
+    "label": "Jungle",
+    "championId": 134,
+    "champion": "Syndra",
+    "role": "jungle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 46.7,
+    "pickRate": 1.4,
+    "gamesCount": 2100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "syndra-top",
+    "label": "Top",
+    "championId": 134,
+    "champion": "Syndra",
+    "role": "top",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8126,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 48.2,
+    "pickRate": 2.6,
+    "gamesCount": 3700,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "zed-middle",
+    "label": "Assassin",
+    "championId": 238,
+    "champion": "Zed",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      8014,
+      9111,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.3,
+    "pickRate": 8.9,
+    "gamesCount": 12700,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "zed-assassin",
+    "label": "High Risk High Reward",
+    "championId": 238,
+    "champion": "Zed",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8112,
+      8126,
+      8135,
+      8106,
+      8226,
+      8237,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 50.7,
+    "pickRate": 4.2,
+    "gamesCount": 6100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "zed-top",
+    "label": "Top Lane",
+    "championId": 238,
+    "champion": "Zed",
+    "role": "top",
+    "primaryStyle": "Domination",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      8444,
+      8451,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.8,
+    "pickRate": 5.3,
+    "gamesCount": 7400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "cassiopeia-middle",
+    "label": "Control",
+    "championId": 69,
+    "champion": "Cassiopeia",
+    "role": "middle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8126,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 50.9,
+    "pickRate": 6.7,
+    "gamesCount": 9200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "cassiopeia-apc",
+    "label": "AP Carry",
+    "championId": 69,
+    "champion": "Cassiopeia",
+    "role": "bottom",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8229,
+      8234,
+      8210,
+      8237,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 51.4,
+    "pickRate": 3.8,
+    "gamesCount": 5400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "cassiopeia-support",
+    "label": "Support",
+    "championId": 69,
+    "champion": "Cassiopeia",
+    "role": "utility",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8229,
+      8210,
+      8237,
+      8236,
+      8463,
+      8453,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 49.6,
+    "pickRate": 4.1,
+    "gamesCount": 5900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "diana-middle",
+    "label": "Assassin",
+    "championId": 131,
+    "champion": "Diana",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      8226,
+      8237,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.2,
+    "pickRate": 7.3,
+    "gamesCount": 10100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "diana-jungle",
+    "label": "Jungle",
+    "championId": 131,
+    "champion": "Diana",
+    "role": "jungle",
+    "primaryStyle": "Domination",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      8014,
+      9111,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 51.1,
+    "pickRate": 6.8,
+    "gamesCount": 9400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "diana-top",
+    "label": "Top Lane",
+    "championId": 131,
+    "champion": "Diana",
+    "role": "top",
+    "primaryStyle": "Domination",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      8444,
+      8451,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.7,
+    "pickRate": 3.9,
+    "gamesCount": 5500,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "talon-middle",
+    "label": "Assassin",
+    "championId": 91,
+    "champion": "Talon",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8112,
+      8126,
+      8135,
+      8106,
+      8014,
+      9111,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.5,
+    "pickRate": 8.1,
+    "gamesCount": 11300,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "talon-assassin",
+    "label": "Burst Damage",
+    "championId": 91,
+    "champion": "Talon",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8112,
+      8139,
+      8135,
+      8106,
+      8226,
+      8237,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 50.8,
+    "pickRate": 4.7,
+    "gamesCount": 6700,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "talon-jungle",
+    "label": "Jungle Assassin",
+    "championId": 91,
+    "champion": "Talon",
+    "role": "jungle",
+    "primaryStyle": "Domination",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 49.9,
+    "pickRate": 5.2,
+    "gamesCount": 7300,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "ekko-middle",
+    "label": "Assassin",
+    "championId": 245,
+    "champion": "Ekko",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8112,
+      8126,
+      8135,
+      8106,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.6,
+    "pickRate": 7.8,
+    "gamesCount": 10800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "ekko-assassin",
+    "label": "High Mobility",
+    "championId": 245,
+    "champion": "Ekko",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      8226,
+      8237,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 50.1,
+    "pickRate": 4.3,
+    "gamesCount": 6200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "ekko-jungle",
+    "label": "Jungle",
+    "championId": 245,
+    "champion": "Ekko",
+    "role": "jungle",
+    "primaryStyle": "Domination",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      8014,
+      9111,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 51.2,
+    "pickRate": 6.9,
+    "gamesCount": 9600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "irelia-top",
+    "label": "Fighter",
+    "championId": 39,
+    "champion": "Irelia",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8299,
+      8444,
+      8451,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.7,
+    "pickRate": 6.4,
+    "gamesCount": 8900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "irelia-middle",
+    "label": "Mid",
+    "championId": 39,
+    "champion": "Irelia",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8014,
+      8143,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.8,
+    "pickRate": 4.1,
+    "gamesCount": 5800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "irelia-fighter",
+    "label": "Tanky Fighter",
+    "championId": 39,
+    "champion": "Irelia",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8008,
+      9111,
+      9104,
+      8014,
+      8444,
+      8451,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 49.3,
+    "pickRate": 3.2,
+    "gamesCount": 4600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "camille-top",
+    "label": "Top",
+    "championId": 164,
+    "champion": "Camille",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8299,
+      8444,
+      8451,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.1,
+    "pickRate": 7.2,
+    "gamesCount": 10100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "camille-bruiser",
+    "label": "Bruiser",
+    "championId": 164,
+    "champion": "Camille",
+    "role": "jungle",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9104,
+      8014,
+      8143,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 50.3,
+    "pickRate": 5.7,
+    "gamesCount": 8100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "camille-offensive",
+    "label": "Offensive",
+    "championId": 164,
+    "champion": "Camille",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8008,
+      9111,
+      9104,
+      8014,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 49.6,
+    "pickRate": 3.8,
+    "gamesCount": 5400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "katarina-middle",
+    "label": "Assassin",
+    "championId": 55,
+    "champion": "Katarina",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8112,
+      8126,
+      8135,
+      8106,
+      8226,
+      8237,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.9,
+    "pickRate": 9.2,
+    "gamesCount": 12800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "katarina-assassin",
+    "label": "High DPS",
+    "championId": 55,
+    "champion": "Katarina",
+    "role": "middle",
+    "primaryStyle": "Domination",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 51.4,
+    "pickRate": 4.9,
+    "gamesCount": 7100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "katarina-top",
+    "label": "Top Lane",
+    "championId": 55,
+    "champion": "Katarina",
+    "role": "top",
+    "primaryStyle": "Domination",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8112,
+      8143,
+      8135,
+      8106,
+      8014,
+      9111,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.7,
+    "pickRate": 3.6,
+    "gamesCount": 5200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "fiora-top",
+    "label": "Top",
+    "championId": 114,
+    "champion": "Fiora",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8008,
+      9111,
+      9104,
+      8014,
+      8126,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.6,
+    "pickRate": 8.4,
+    "gamesCount": 11700,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "fiora-fighter",
+    "label": "Fighter",
+    "championId": 114,
+    "champion": "Fiora",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8299,
+      8444,
+      8451,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 50.8,
+    "pickRate": 4.1,
+    "gamesCount": 5900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "fiora-middle",
+    "label": "Mid",
+    "championId": 114,
+    "champion": "Fiora",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8008,
+      9111,
+      9104,
+      8014,
+      8226,
+      8236,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.9,
+    "pickRate": 3.7,
+    "gamesCount": 5300,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "blitzcrank-support",
+    "label": "Support",
+    "championId": 53,
+    "champion": "Blitzcrank",
+    "role": "utility",
+    "primaryStyle": "Resolve",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8439,
+      8463,
+      8473,
+      8451,
+      8304,
+      8347,
+      5007,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 51.8,
+    "pickRate": 9.3,
+    "gamesCount": 12900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "blitzcrank-tank",
+    "label": "Tank",
+    "championId": 53,
+    "champion": "Blitzcrank",
+    "role": "top",
+    "primaryStyle": "Resolve",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8437,
+      8446,
+      8429,
+      8451,
+      8014,
+      8009,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.4,
+    "pickRate": 4.8,
+    "gamesCount": 6800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "blitzcrank-assassin",
+    "label": "Hookshot Assassin",
+    "championId": 53,
+    "champion": "Blitzcrank",
+    "role": "jungle",
+    "primaryStyle": "Domination",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8112,
+      8126,
+      8135,
+      8106,
+      8444,
+      8451,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 48.7,
+    "pickRate": 2.3,
+    "gamesCount": 3400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "janna-support",
+    "label": "Support",
+    "championId": 40,
+    "champion": "Janna",
+    "role": "utility",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8236,
+      8463,
+      8453,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 51.2,
+    "pickRate": 7.6,
+    "gamesCount": 10600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "janna-mage",
+    "label": "Mage Support",
+    "championId": 40,
+    "champion": "Janna",
+    "role": "utility",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8237,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 50.5,
+    "pickRate": 3.9,
+    "gamesCount": 5600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "janna-control",
+    "label": "Control",
+    "championId": 40,
+    "champion": "Janna",
+    "role": "middle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8126,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 49.3,
+    "pickRate": 2.8,
+    "gamesCount": 4100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "senna-bottom",
+    "label": "Bottom",
+    "championId": 235,
+    "champion": "Senna",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8008,
+      8009,
+      9104,
+      8014,
+      8226,
+      8236,
+      5005,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 50.8,
+    "pickRate": 10.7,
+    "gamesCount": 15100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "senna-support",
+    "label": "Support",
+    "championId": 235,
+    "champion": "Senna",
+    "role": "utility",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      8009,
+      9105,
+      8014,
+      8444,
+      8451,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 51.3,
+    "pickRate": 6.4,
+    "gamesCount": 9100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "senna-apc",
+    "label": "AP Carry",
+    "championId": 235,
+    "champion": "Senna",
+    "role": "bottom",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8021,
+      8009,
+      9104,
+      8014,
+      8210,
+      8237,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 49.9,
+    "pickRate": 3.7,
+    "gamesCount": 5300,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "sett-top",
+    "label": "Top",
+    "championId": 875,
+    "champion": "Sett",
+    "role": "top",
+    "primaryStyle": "Resolve",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8437,
+      8446,
+      8429,
+      8451,
+      8014,
+      8009,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.5,
+    "pickRate": 7.9,
+    "gamesCount": 11100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "sett-tank",
+    "label": "Tank",
+    "championId": 875,
+    "champion": "Sett",
+    "role": "jungle",
+    "primaryStyle": "Resolve",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8437,
+      8446,
+      8429,
+      8451,
+      8126,
+      8106,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 50.2,
+    "pickRate": 5.4,
+    "gamesCount": 7600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "sett-fighter",
+    "label": "Fighter",
+    "championId": 875,
+    "champion": "Sett",
+    "role": "top",
+    "primaryStyle": "Resolve",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8439,
+      8463,
+      8473,
+      8451,
+      8304,
+      8347,
+      5007,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      6
+    ],
+    "winRate": 49.6,
+    "pickRate": 2.9,
+    "gamesCount": 4200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "yone-middle",
+    "label": "Assassin",
+    "championId": 777,
+    "champion": "Yone",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8008,
+      9111,
+      9104,
+      8014,
+      8126,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.7,
+    "pickRate": 8.3,
+    "gamesCount": 11600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "yone-top",
+    "label": "Top",
+    "championId": 777,
+    "champion": "Yone",
+    "role": "top",
+    "primaryStyle": "Precision",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8010,
+      9111,
+      9105,
+      8299,
+      8444,
+      8451,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 50.1,
+    "pickRate": 5.8,
+    "gamesCount": 8100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "yone-assassin",
+    "label": "Burst Damage",
+    "championId": 777,
+    "champion": "Yone",
+    "role": "middle",
+    "primaryStyle": "Precision",
+    "subStyle": "Sorcery",
+    "selectedPerkIds": [
+      8008,
+      9111,
+      9104,
+      8014,
+      8226,
+      8236,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 49.4,
+    "pickRate": 3.4,
+    "gamesCount": 4900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "lillia-jungle",
+    "label": "Jungle",
+    "championId": 876,
+    "champion": "Lillia",
+    "role": "jungle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8126,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 49.8,
+    "pickRate": 6.2,
+    "gamesCount": 8800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "lillia-support",
+    "label": "Support",
+    "championId": 876,
+    "champion": "Lillia",
+    "role": "utility",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8236,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 50.5,
+    "pickRate": 4.1,
+    "gamesCount": 5800,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "lillia-mage",
+    "label": "Mage",
+    "championId": 876,
+    "champion": "Lillia",
+    "role": "jungle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8229,
+      8234,
+      8210,
+      8237,
+      8463,
+      8453,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 49.1,
+    "pickRate": 2.7,
+    "gamesCount": 3900,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "heimerdinger-middle",
+    "label": "Control",
+    "championId": 74,
+    "champion": "Heimerdinger",
+    "role": "middle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8236,
+      8463,
+      8453,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 48.9,
+    "pickRate": 2.5,
+    "gamesCount": 3600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "heimerdinger-top",
+    "label": "Top",
+    "championId": 74,
+    "champion": "Heimerdinger",
+    "role": "top",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8237,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 49.2,
+    "pickRate": 3.1,
+    "gamesCount": 4400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "heimerdinger-support",
+    "label": "Support",
+    "championId": 74,
+    "champion": "Heimerdinger",
+    "role": "utility",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8126,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 50.3,
+    "pickRate": 4.6,
+    "gamesCount": 6400,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "gnar-top",
+    "label": "Top",
+    "championId": 75,
+    "champion": "Gnar",
+    "role": "top",
+    "primaryStyle": "Resolve",
+    "subStyle": "Precision",
+    "selectedPerkIds": [
+      8437,
+      8446,
+      8429,
+      8451,
+      8014,
+      8009,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      14
+    ],
+    "winRate": 51.4,
+    "pickRate": 7.3,
+    "gamesCount": 10200,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "gnar-tank",
+    "label": "Tank",
+    "championId": 75,
+    "champion": "Gnar",
+    "role": "jungle",
+    "primaryStyle": "Resolve",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8439,
+      8463,
+      8473,
+      8451,
+      8304,
+      8347,
+      5007,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      11
+    ],
+    "winRate": 50.1,
+    "pickRate": 4.9,
+    "gamesCount": 7100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "gnar-fighter",
+    "label": "Fighter",
+    "championId": 75,
+    "champion": "Gnar",
+    "role": "top",
+    "primaryStyle": "Resolve",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8437,
+      8446,
+      8429,
+      8451,
+      8126,
+      8106,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      6
+    ],
+    "winRate": 49.5,
+    "pickRate": 3.2,
+    "gamesCount": 4600,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "velkoz-middle",
+    "label": "Control",
+    "championId": 161,
+    "champion": "Velkoz",
+    "role": "middle",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Domination",
+    "selectedPerkIds": [
+      8229,
+      8226,
+      8210,
+      8237,
+      8126,
+      8106,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      12
+    ],
+    "winRate": 50.6,
+    "pickRate": 6.8,
+    "gamesCount": 9500,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "velkoz-apc",
+    "label": "AP Carry",
+    "championId": 161,
+    "champion": "Velkoz",
+    "role": "utility",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Inspiration",
+    "selectedPerkIds": [
+      8229,
+      8234,
+      8210,
+      8237,
+      8304,
+      8347,
+      5008,
+      5008,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      7
+    ],
+    "winRate": 51.1,
+    "pickRate": 4.2,
+    "gamesCount": 6100,
+    "patch": "data-dragon-current"
+  },
+  {
+    "buildId": "velkoz-support",
+    "label": "Support",
+    "championId": 161,
+    "champion": "Velkoz",
+    "role": "utility",
+    "primaryStyle": "Sorcery",
+    "subStyle": "Resolve",
+    "selectedPerkIds": [
+      8214,
+      8226,
+      8210,
+      8236,
+      8463,
+      8453,
+      5008,
+      5002,
+      5011
+    ],
+    "summonerSpellIds": [
+      4,
+      3
+    ],
+    "winRate": 49.7,
+    "pickRate": 3.8,
+    "gamesCount": 5500,
+    "patch": "data-dragon-current"
+  }
+]
