@@ -1,0 +1,2 @@
+ALTER TABLE "MatchRecord"
+  ALTER COLUMN "rawPayload" DROP NOT NULL;

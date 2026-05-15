@@ -63,6 +63,9 @@ const fullRefreshBodySchema = seedRankedAccountsBodySchema.extend({
 const deleteOldRawMatchesBodySchema = z.object({
   olderThanDays: z.coerce.number().int().min(0).max(3650).default(30),
 }).partial().default({});
+const compactMatchRecordsBodySchema = z.object({
+  batchSize: z.coerce.number().int().min(100).max(500).default(250),
+}).partial().default({});
 
 export const jobsRouter = Router();
 
@@ -180,9 +183,18 @@ jobsRouter.post("/full-refresh", async (request, response) => {
   }
 });
 
-jobsRouter.post("/compact-match-records", async (_request, response) => {
+jobsRouter.post("/compact-match-records", async (request, response) => {
+  const parsed = compactMatchRecordsBodySchema.safeParse(request.body ?? {});
+  if (!parsed.success) {
+    return response.status(400).json({
+      ok: false,
+      error: "Invalid request body.",
+      details: parsed.error.flatten(),
+    });
+  }
+
   try {
-    const result = await compactMatchRecordsJob.run();
+    const result = await compactMatchRecordsJob.run(parsed.data.batchSize ?? 250);
     return response.status(200).json(result);
   } catch (error) {
     return sendJobError(response, error);

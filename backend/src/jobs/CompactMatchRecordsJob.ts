@@ -3,7 +3,9 @@ import { compactStoredPayload } from "../lib/matchPayload.js";
 import { logInfo } from "../lib/logger.js";
 import { assertNoRunningJob } from "../lib/jobGuards.js";
 
-const BATCH_SIZE = 250;
+const DEFAULT_BATCH_SIZE = 250;
+const MIN_BATCH_SIZE = 100;
+const MAX_BATCH_SIZE = 500;
 
 export type CompactMatchRecordsResult = {
   ok: true;
@@ -15,8 +17,9 @@ export type CompactMatchRecordsResult = {
 };
 
 export class CompactMatchRecordsJob {
-  async run(): Promise<CompactMatchRecordsResult> {
+  async run(batchSize = DEFAULT_BATCH_SIZE): Promise<CompactMatchRecordsResult> {
     await assertNoRunningJob("compact-match-records");
+    const normalizedBatchSize = normalizeBatchSize(batchSize);
     const startedAt = new Date();
     const jobLog = await prisma.fetchJobLog.create({
       data: {
@@ -37,7 +40,7 @@ export class CompactMatchRecordsJob {
     try {
       while (true) {
         const records = await prisma.matchRecord.findMany({
-          take: BATCH_SIZE,
+          take: normalizedBatchSize,
           where: {
             analyzedAt: {
               not: null,
@@ -148,4 +151,12 @@ export const compactMatchRecordsJob = new CompactMatchRecordsJob();
 
 function getSafeErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+function normalizeBatchSize(batchSize: number) {
+  if (!Number.isInteger(batchSize)) {
+    return DEFAULT_BATCH_SIZE;
+  }
+
+  return Math.min(MAX_BATCH_SIZE, Math.max(MIN_BATCH_SIZE, batchSize));
 }

@@ -122,7 +122,7 @@ model MatchRecord {
   playedAt        DateTime?
   rawPayload      String?
   compactPayload  String?
-  payloadFormat   String   @default("full-json")
+  payloadFormat   String?
   analyzedAt      DateTime?
   compactedAt     DateTime?
   fetchedAt       DateTime @default(now())
