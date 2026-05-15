@@ -1,0 +1,151 @@
+import { prisma } from "../lib/prisma.js";
+import { compactStoredPayload } from "../lib/matchPayload.js";
+import { logInfo } from "../lib/logger.js";
+import { assertNoRunningJob } from "../lib/jobGuards.js";
+
+const BATCH_SIZE = 250;
+
+export type CompactMatchRecordsResult = {
+  ok: true;
+  recordsRead: number;
+  recordsCompacted: number;
+  recordsSkipped: number;
+  rawBytesBefore: number;
+  compactBytesAfter: number;
+};
+
+export class CompactMatchRecordsJob {
+  async run(): Promise<CompactMatchRecordsResult> {
+    await assertNoRunningJob("compact-match-records");
+    const startedAt = new Date();
+    const jobLog = await prisma.fetchJobLog.create({
+      data: {
+        jobName: "compact-match-records",
+        status: "running",
+        target: "match-records",
+        startedAt,
+      },
+    });
+
+    let recordsRead = 0;
+    let recordsCompacted = 0;
+    let recordsSkipped = 0;
+    let rawBytesBefore = 0;
+    let compactBytesAfter = 0;
+    let cursorId: string | undefined;
+
+    try {
+      while (true) {
+        const records = await prisma.matchRecord.findMany({
+          take: BATCH_SIZE,
+          where: {
+            analyzedAt: {
+              not: null,
+            },
+          },
+          ...(cursorId ? { skip: 1, cursor: { id: cursorId } } : {}),
+          orderBy: { id: "asc" },
+          select: {
+            id: true,
+            riotMatchId: true,
+            rawPayload: true,
+            compactPayload: true,
+            compactedAt: true,
+          },
+        });
+
+        if (records.length === 0) {
+          break;
+        }
+
+        for (const record of records) {
+          recordsRead += 1;
+          cursorId = record.id;
+
+          if (record.compactPayload) {
+            if (!record.compactedAt) {
+              await prisma.matchRecord.update({
+                where: { id: record.id },
+                data: {
+                  compactedAt: new Date(),
+                },
+              });
+            }
+            recordsSkipped += 1;
+            continue;
+          }
+
+          const compactPayload = compactStoredPayload(record.riotMatchId, record.rawPayload);
+          if (!compactPayload) {
+            recordsSkipped += 1;
+            continue;
+          }
+
+          rawBytesBefore += Buffer.byteLength(record.rawPayload ?? "", "utf8");
+          compactBytesAfter += Buffer.byteLength(compactPayload, "utf8");
+
+          await prisma.matchRecord.update({
+            where: { id: record.id },
+            data: {
+              compactPayload,
+              rawPayload: null,
+              payloadFormat: "compact-json-v1",
+              compactedAt: new Date(),
+            },
+          });
+          recordsCompacted += 1;
+        }
+
+        logInfo("[db] compact-match-records batch completed", {
+          recordsRead,
+          recordsCompacted,
+          recordsSkipped,
+        });
+      }
+
+      const finishedAt = new Date();
+      await prisma.fetchJobLog.update({
+        where: { id: jobLog.id },
+        data: {
+          status: "completed",
+          finishedAt,
+          durationMs: finishedAt.getTime() - startedAt.getTime(),
+          recordsRead,
+          recordsSaved: recordsCompacted,
+          metadata: JSON.stringify({
+            recordsSkipped,
+            rawBytesBefore,
+            compactBytesAfter,
+            bytesSavedEstimate: rawBytesBefore - compactBytesAfter,
+          }),
+        },
+      });
+
+      return {
+        ok: true,
+        recordsRead,
+        recordsCompacted,
+        recordsSkipped,
+        rawBytesBefore,
+        compactBytesAfter,
+      };
+    } catch (error) {
+      await prisma.fetchJobLog.update({
+        where: { id: jobLog.id },
+        data: {
+          status: "failed",
+          finishedAt: new Date(),
+          durationMs: Date.now() - startedAt.getTime(),
+          errorMessage: getSafeErrorMessage(error),
+        },
+      });
+      throw error;
+    }
+  }
+}
+
+export const compactMatchRecordsJob = new CompactMatchRecordsJob();
+
+function getSafeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}

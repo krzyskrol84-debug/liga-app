@@ -12,6 +12,7 @@ import {
 } from "../lib/jobStatus.js";
 import { markAnalyticsJobFailed, setAnalyticsJobState } from "../lib/analyticsJobState.js";
 import { dataDragonService } from "../riot/DataDragonService.js";
+import { parseStoredMatchPayload, type StoredParticipant } from "../lib/matchPayload.js";
 
 const RECORD_CHUNK_SIZE = 750;
 const WRITE_BATCH_SIZE = 250;
@@ -20,35 +21,7 @@ type SupportedRole = "TOP" | "JUNGLE" | "MIDDLE" | "BOTTOM" | "UTILITY";
 type NormalizedRole = "top" | "jungle" | "middle" | "bottom" | "utility";
 type ItemSetType = "starting" | "core" | "fourth" | "fifth" | "sixth";
 
-type RiotStoredMatchPayload = {
-  info?: {
-    gameVersion?: string;
-    participants?: RiotStoredParticipant[];
-  };
-};
-
-type RiotStoredParticipant = {
-  championId?: number;
-  teamId?: number;
-  teamPosition?: string;
-  win?: boolean;
-  summoner1Id?: number;
-  summoner2Id?: number;
-  perks?: {
-    styles?: Array<{
-      style?: number;
-      selections?: Array<{
-        perk?: number;
-      }>;
-    }>;
-  };
-  item0?: number;
-  item1?: number;
-  item2?: number;
-  item3?: number;
-  item4?: number;
-  item5?: number;
-};
+type RiotStoredParticipant = StoredParticipant;
 
 type RecommendationAggregate = {
   patch: string;
@@ -102,11 +75,15 @@ type MatchRecordForAnalysis = {
   riotMatchId: string;
   puuid: string;
   patch: string | null;
-  rawPayload: string;
+  rawPayload: string | null;
+  compactPayload: string | null;
 };
 
 type ChunkAnalysisResult = {
   processedRecords: number;
+  analyzedRecordIds: string[];
+  participantsRead: number;
+  participantsSkipped: number;
   recommendationAggregates: Map<string, RecommendationAggregate>;
   itemAggregates: Map<string, ItemAggregate>;
   matchupAggregates: Map<string, MatchupAggregate>;
@@ -130,6 +107,21 @@ export type AnalyzeGlobalStatsResult = {
   recommendationStatsCount: number;
   itemStatsCount: number;
   matchupStatsCount: number;
+};
+
+export type AnalyzerSample = {
+  totalMatchRecords: number;
+  firstMatchId: string | null;
+  participantCount: number;
+  sampleChampionId: number | null;
+  sampleRole: NormalizedRole | null;
+  sampleWin: boolean | null;
+  sampleRunes: number[];
+  sampleItems: number[];
+  canGenerateRecommendation: boolean;
+  canGenerateItemStats: boolean;
+  canGenerateMatchup: boolean;
+  reasonIfFalse: string | null;
 };
 
 export class MatchAnalyzer {
@@ -241,6 +233,9 @@ export class MatchAnalyzer {
       const itemAggregates = new Map<string, ItemAggregate>();
       const matchupAggregates = new Map<string, MatchupAggregate>();
       let processedRecords = 0;
+      const analyzedRecordIds: string[] = [];
+      let participantsRead = 0;
+      let participantsSkipped = 0;
       let cursorId: string | undefined;
       const pendingChunkAnalyses: Array<Promise<ChunkAnalysisResult>> = [];
 
@@ -286,6 +281,7 @@ export class MatchAnalyzer {
             puuid: true,
             patch: true,
             rawPayload: true,
+            compactPayload: true,
           },
         });
 
@@ -310,6 +306,9 @@ export class MatchAnalyzer {
             jobLogId: jobLog.id,
             startedAt,
           });
+          participantsRead += results.reduce((sum, result) => sum + result.participantsRead, 0);
+          participantsSkipped += results.reduce((sum, result) => sum + result.participantsSkipped, 0);
+          analyzedRecordIds.push(...results.flatMap((result) => result.analyzedRecordIds));
         }
       }
 
@@ -326,6 +325,9 @@ export class MatchAnalyzer {
           jobLogId: jobLog.id,
           startedAt,
         });
+        participantsRead += results.reduce((sum, result) => sum + result.participantsRead, 0);
+        participantsSkipped += results.reduce((sum, result) => sum + result.participantsSkipped, 0);
+        analyzedRecordIds.push(...results.flatMap((result) => result.analyzedRecordIds));
       }
 
       const source = "riot-api";
@@ -376,6 +378,15 @@ export class MatchAnalyzer {
         fetchedAt: now,
       }));
 
+      logInfo("[analyzer] aggregate summary", {
+        matchesRead: totalRecords,
+        participantsRead,
+        participantsSkipped,
+        recommendationGroupsGenerated: recommendationStatsRows.length,
+        itemGroupsGenerated: itemStatsRows.length,
+        matchupGroupsGenerated: matchupStatsRows.length,
+      });
+
       await saveAnalyzerProgress({
         jobLogId: jobLog.id,
         startedAt,
@@ -389,6 +400,17 @@ export class MatchAnalyzer {
         currentSummoner: null,
         currentMatchId: null,
       });
+
+      if (
+        totalRecords > 0 &&
+        recommendationStatsRows.length === 0 &&
+        itemStatsRows.length === 0 &&
+        matchupStatsRows.length === 0
+      ) {
+        throw new Error(
+          "Analyzer read MatchRecord rows but generated zero stats; preserving existing stats instead of deleting them.",
+        );
+      }
 
       logInfo("[db] clearing old riot-api stats", {
         recommendationStats: recommendationStatsRows.length,
@@ -413,17 +435,20 @@ export class MatchAnalyzer {
         }),
       ]);
 
+      let statsInserted = 0;
+
       for (const rows of chunk(recommendationStatsRows, WRITE_BATCH_SIZE)) {
         logInfo("[db] saving recommendation stats batch", {
           rows: rows.length,
           champion: formatChampionName(rows[0]?.championId, championNameById),
           role: rows[0]?.role ?? null,
         });
-        await prisma.$transaction([
+        const [result] = await prisma.$transaction([
           prisma.recommendationStats.createMany({
             data: rows,
           }),
         ]);
+        statsInserted += result.count;
       }
 
       for (const rows of chunk(itemStatsRows, WRITE_BATCH_SIZE)) {
@@ -432,11 +457,12 @@ export class MatchAnalyzer {
           champion: formatChampionName(rows[0]?.championId, championNameById),
           role: rows[0]?.role ?? null,
         });
-        await prisma.$transaction([
+        const [result] = await prisma.$transaction([
           prisma.itemStats.createMany({
             data: rows,
           }),
         ]);
+        statsInserted += result.count;
       }
 
       for (const rows of chunk(matchupStatsRows, WRITE_BATCH_SIZE)) {
@@ -445,11 +471,12 @@ export class MatchAnalyzer {
           champion: formatChampionName(rows[0]?.championId, championNameById),
           role: rows[0]?.role ?? null,
         });
-        await prisma.$transaction([
+        const [result] = await prisma.$transaction([
           prisma.matchupStats.createMany({
             data: rows,
           }),
         ]);
+        statsInserted += result.count;
       }
 
       logInfo("[db] saved analyzer stats", {
@@ -458,7 +485,21 @@ export class MatchAnalyzer {
         itemStatsAdded: itemStatsRows.length,
         matchupStatsAdded: matchupStatsRows.length,
         matchesProcessed: processedRecords,
+        statsInserted,
       });
+
+      for (const ids of chunk(analyzedRecordIds, WRITE_BATCH_SIZE)) {
+        await prisma.matchRecord.updateMany({
+          where: {
+            id: {
+              in: ids,
+            },
+          },
+          data: {
+            analyzedAt: now,
+          },
+        });
+      }
 
       recommendationAggregates.clear();
       itemAggregates.clear();
@@ -541,6 +582,106 @@ export class MatchAnalyzer {
       throw error;
     }
   }
+
+  async getAnalyzerSample(): Promise<AnalyzerSample> {
+    const latestPatch = await resolveLatestPatch();
+    const [totalMatchRecords, firstRecord] = await Promise.all([
+      prisma.matchRecord.count(),
+      prisma.matchRecord.findFirst({
+        ...(latestPatch
+          ? {
+              where: getAnalysisRecordWhere(latestPatch),
+            }
+          : {}),
+        orderBy: {
+          createdAt: "asc",
+        },
+        select: {
+          riotMatchId: true,
+          patch: true,
+          rawPayload: true,
+          compactPayload: true,
+        },
+      }),
+    ]);
+
+    if (!firstRecord) {
+      return {
+        totalMatchRecords,
+        firstMatchId: null,
+        participantCount: 0,
+        sampleChampionId: null,
+        sampleRole: null,
+        sampleWin: null,
+        sampleRunes: [],
+        sampleItems: [],
+        canGenerateRecommendation: false,
+        canGenerateItemStats: false,
+        canGenerateMatchup: false,
+        reasonIfFalse: "No MatchRecord rows found.",
+      };
+    }
+
+    const parsed = safeParseMatch(firstRecord.rawPayload, firstRecord.compactPayload);
+    const participants = parsed?.info?.participants ?? [];
+    const patch = firstRecord.patch ?? extractPatchFromVersion(parsed?.info?.gameVersion);
+    const extractedParticipants = patch
+      ? participants
+          .map((participant) => extractParticipant(participant, patch))
+          .filter((participant): participant is ExtractedParticipant => participant !== null)
+      : [];
+    const sampleParticipant = participants[0];
+    const sampleExtractedParticipant = patch && sampleParticipant
+      ? extractParticipant(sampleParticipant, patch)
+      : null;
+    const sampleRole = normalizeParticipantRole(sampleParticipant);
+    const sampleRunes = sampleParticipant ? collectSelectedPerkIds(sampleParticipant) : [];
+    const sampleItems = sampleParticipant ? collectFinalItems(sampleParticipant) : [];
+    const reasons: string[] = [];
+
+    if (!parsed) reasons.push("rawPayload is not valid JSON.");
+    if (!patch) reasons.push("patch is missing.");
+    if (participants.length === 0) reasons.push("info.participants is empty.");
+    if (sampleParticipant && !sampleRole) reasons.push("sample participant has no supported role.");
+    if (sampleParticipant && sampleRunes.length === 0) reasons.push("sample participant has no runes.");
+    if (sampleParticipant && sampleItems.length === 0) reasons.push("sample participant has no completed items.");
+    if (!sampleExtractedParticipant) reasons.push("sample participant cannot be fully extracted.");
+    if (
+      extractedParticipants.length > 0 &&
+      !extractedParticipants.some((participant) =>
+        extractedParticipants.some(
+          (candidate) =>
+            candidate.role === participant.role &&
+            candidate.teamId !== participant.teamId &&
+            candidate.championId !== participant.championId,
+        ),
+      )
+    ) {
+      reasons.push("sample match has no cross-team same-role pair for matchup stats.");
+    }
+
+    return {
+      totalMatchRecords,
+      firstMatchId: firstRecord.riotMatchId,
+      participantCount: participants.length,
+      sampleChampionId: sampleParticipant?.championId ?? null,
+      sampleRole,
+      sampleWin: typeof sampleParticipant?.win === "boolean" ? sampleParticipant.win : null,
+      sampleRunes,
+      sampleItems,
+      canGenerateRecommendation: Boolean(sampleExtractedParticipant),
+      canGenerateItemStats: Boolean(sampleExtractedParticipant && sampleExtractedParticipant.itemSets.length > 0),
+      canGenerateMatchup: extractedParticipants.some((participant) =>
+        extractedParticipants.some(
+          (candidate) =>
+            candidate.role === participant.role &&
+            candidate.teamId !== participant.teamId &&
+            candidate.championId !== participant.championId,
+        ),
+      ),
+      reasonIfFalse: reasons.length > 0 ? reasons.join(" ") : null,
+    };
+  }
 }
 
 async function mergeChunkResultsAndSaveProgress(options: {
@@ -600,13 +741,16 @@ function analyzeRecordChunk(
   const itemAggregates = new Map<string, ItemAggregate>();
   const matchupAggregates = new Map<string, MatchupAggregate>();
   let processedRecords = 0;
+  const analyzedRecordIds: string[] = [];
+  let participantsRead = 0;
+  let participantsSkipped = 0;
   let currentChampionId: number | null = null;
   let currentRole: NormalizedRole | null = null;
   let currentSummoner: string | null = null;
   let currentMatchId: string | null = null;
 
   for (const record of records) {
-    const parsed = safeParseMatch(record.rawPayload);
+    const parsed = safeParseMatch(record.rawPayload, record.compactPayload);
     const participants = parsed?.info?.participants ?? [];
     const patch = record.patch ?? extractPatchFromVersion(parsed?.info?.gameVersion);
 
@@ -614,15 +758,18 @@ function analyzeRecordChunk(
       continue;
     }
 
+    participantsRead += participants.length;
     const extractedParticipants = participants
       .map((participant) => extractParticipant(participant, patch))
       .filter((participant): participant is ExtractedParticipant => participant !== null);
+    participantsSkipped += participants.length - extractedParticipants.length;
 
     if (extractedParticipants.length === 0) {
       continue;
     }
 
     processedRecords += 1;
+    analyzedRecordIds.push(record.id);
 
     for (const participant of extractedParticipants) {
       accumulateRecommendationStats(recommendationAggregates, participant);
@@ -640,6 +787,9 @@ function analyzeRecordChunk(
 
   return {
     processedRecords,
+    analyzedRecordIds,
+    participantsRead,
+    participantsSkipped,
     recommendationAggregates,
     itemAggregates,
     matchupAggregates,
@@ -663,12 +813,8 @@ function getAnalysisRecordWhere(latestPatch: string) {
   };
 }
 
-function safeParseMatch(rawPayload: string): RiotStoredMatchPayload | null {
-  try {
-    return JSON.parse(rawPayload) as RiotStoredMatchPayload;
-  } catch {
-    return null;
-  }
+function safeParseMatch(rawPayload: string | null, compactPayload?: string | null) {
+  return parseStoredMatchPayload(rawPayload, compactPayload);
 }
 
 function extractParticipant(
@@ -677,7 +823,7 @@ function extractParticipant(
 ): ExtractedParticipant | null {
   const championId = participant.championId;
   const teamId = participant.teamId;
-  const role = normalizeRole(participant.teamPosition);
+  const role = normalizeParticipantRole(participant);
   const primaryStyleId = participant.perks?.styles?.[0]?.style;
   const subStyleId = participant.perks?.styles?.[1]?.style;
   const summoner1Id = participant.summoner1Id;
@@ -722,14 +868,7 @@ function collectSelectedPerkIds(participant: RiotStoredParticipant): number[] {
 }
 
 function collectItemSets(participant: RiotStoredParticipant): ExtractedParticipant["itemSets"] {
-  const finalItems = [
-    participant.item0 ?? 0,
-    participant.item1 ?? 0,
-    participant.item2 ?? 0,
-    participant.item3 ?? 0,
-    participant.item4 ?? 0,
-    participant.item5 ?? 0,
-  ].filter((itemId): itemId is number => Number.isInteger(itemId) && itemId > 0);
+  const finalItems = collectFinalItems(participant);
 
   const itemSets: ExtractedParticipant["itemSets"] = [];
 
@@ -769,6 +908,25 @@ function collectItemSets(participant: RiotStoredParticipant): ExtractedParticipa
   }
 
   return itemSets;
+}
+
+function collectFinalItems(participant: RiotStoredParticipant): number[] {
+  return [
+    participant.item0 ?? 0,
+    participant.item1 ?? 0,
+    participant.item2 ?? 0,
+    participant.item3 ?? 0,
+    participant.item4 ?? 0,
+    participant.item5 ?? 0,
+  ].filter((itemId): itemId is number => Number.isInteger(itemId) && itemId > 0);
+}
+
+function normalizeParticipantRole(participant: RiotStoredParticipant | undefined): NormalizedRole | null {
+  if (!participant) {
+    return null;
+  }
+
+  return normalizeRole(participant.teamPosition) ?? normalizeRole(participant.individualPosition);
 }
 
 function normalizeRole(teamPosition: string | undefined): NormalizedRole | null {
@@ -1052,6 +1210,7 @@ async function countProcessedParticipants() {
   const records = await prisma.matchRecord.findMany({
     select: {
       rawPayload: true,
+      compactPayload: true,
       patch: true,
     },
     where: {
@@ -1061,7 +1220,7 @@ async function countProcessedParticipants() {
 
   let count = 0;
   for (const record of records) {
-    const parsed = safeParseMatch(record.rawPayload);
+    const parsed = safeParseMatch(record.rawPayload, record.compactPayload);
     const patch = record.patch ?? extractPatchFromVersion(parsed?.info?.gameVersion);
     if (!patch) {
       continue;

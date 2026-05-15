@@ -1,23 +1,12 @@
 import { prisma } from "../lib/prisma.js";
 import { clearAnalyticsCache } from "../lib/analyticsCache.js";
 import { assertNoRunningJob } from "../lib/jobGuards.js";
+import { parseStoredMatchPayload, type StoredParticipant } from "../lib/matchPayload.js";
 
 type SupportedRole = "TOP" | "JUNGLE" | "MIDDLE" | "BOTTOM" | "UTILITY";
 type NormalizedRole = "top" | "jungle" | "middle" | "bottom" | "utility";
 
-type RiotStoredMatchPayload = {
-  info?: {
-    gameVersion?: string;
-    participants?: RiotStoredParticipant[];
-  };
-};
-
-type RiotStoredParticipant = {
-  championId?: number;
-  teamId?: number;
-  teamPosition?: string;
-  win?: boolean;
-};
+type RiotStoredParticipant = StoredParticipant;
 
 type MatchupAggregate = {
   patch: string;
@@ -59,7 +48,7 @@ export class MatchupAnalyzer {
       let processedMatchups = 0;
 
       for (const record of records) {
-        const parsed = safeParseMatch(record.rawPayload);
+        const parsed = safeParseMatch(record.rawPayload, record.compactPayload);
         const participants = parsed?.info?.participants ?? [];
         const patch = record.patch ?? extractPatchFromVersion(parsed?.info?.gameVersion);
 
@@ -70,7 +59,7 @@ export class MatchupAnalyzer {
         const roleBuckets = new Map<NormalizedRole, RiotStoredParticipant[]>();
 
         for (const participant of participants) {
-          const role = normalizeRole(participant.teamPosition);
+          const role = normalizeParticipantRole(participant);
           if (!role || !participant.championId || !participant.teamId) {
             continue;
           }
@@ -90,7 +79,7 @@ export class MatchupAnalyzer {
               (candidate) =>
                 candidate.teamId !== participant.teamId &&
                 candidate.championId &&
-                candidate.teamPosition === participant.teamPosition,
+                normalizeParticipantRole(candidate) === role,
             );
 
             if (!participant.championId || !participant.teamId || !opponent?.championId) {
@@ -182,12 +171,8 @@ export class MatchupAnalyzer {
   }
 }
 
-function safeParseMatch(rawPayload: string): RiotStoredMatchPayload | null {
-  try {
-    return JSON.parse(rawPayload) as RiotStoredMatchPayload;
-  } catch {
-    return null;
-  }
+function safeParseMatch(rawPayload: string | null, compactPayload?: string | null) {
+  return parseStoredMatchPayload(rawPayload, compactPayload);
 }
 
 function normalizeRole(teamPosition: string | undefined): NormalizedRole | null {
@@ -207,6 +192,10 @@ function normalizeRole(teamPosition: string | undefined): NormalizedRole | null 
     default:
       return null;
   }
+}
+
+function normalizeParticipantRole(participant: RiotStoredParticipant): NormalizedRole | null {
+  return normalizeRole(participant.teamPosition) ?? normalizeRole(participant.individualPosition);
 }
 
 function extractPatchFromVersion(version: string | undefined): string | null {

@@ -5,6 +5,7 @@ import { FetchMatchesJob, type TrackedAccountLike } from "./FetchMatchesJob.js";
 import { RiotApiError } from "../riot/RiotApiClient.js";
 import { backendConfig } from "../config.js";
 import { markAnalyticsJobFailed, setAnalyticsJobState } from "../lib/analyticsJobState.js";
+import { logInfo } from "../lib/logger.js";
 
 const JOB_COOLDOWN_MS = 60_000;
 const BETWEEN_ACCOUNTS_DELAY_MS = 750;
@@ -193,6 +194,14 @@ export class UpdateStatsJob {
         failedAccounts,
         retryScheduledAccounts,
       });
+
+      if (analyzeAfterFetch) {
+        logInfo("[update-stats] starting analyze-global-stats", {
+          accountsProcessed,
+          fetchedMatches,
+          skippedMatches,
+        });
+      }
 
       const globalAnalysis = analyzeAfterFetch
         ? await matchAnalyzer.analyzeGlobalStats()

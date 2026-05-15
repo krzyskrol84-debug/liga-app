@@ -78,6 +78,7 @@ export type MatchParticipantDto = {
   championId: number;
   teamId?: number;
   teamPosition?: string;
+  individualPosition?: string;
   win: boolean;
   kills?: number;
   deaths?: number;

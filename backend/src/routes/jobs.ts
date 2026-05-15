@@ -9,6 +9,8 @@ import { matchAnalyzer } from "../analytics/MatchAnalyzer.js";
 import { matchupAnalyzer } from "../analytics/MatchupAnalyzer.js";
 import { ConcurrentJobError } from "../lib/jobGuards.js";
 import { getAnalyzerJobStatus } from "../lib/jobStatus.js";
+import { compactMatchRecordsJob } from "../jobs/CompactMatchRecordsJob.js";
+import { deleteOldRawMatchesJob } from "../jobs/DeleteOldRawMatchesJob.js";
 
 const platformRegionSchema = z.enum([
   "br1",
@@ -58,6 +60,9 @@ const seedRankedAccountsBodySchema = z.object({
 const fullRefreshBodySchema = seedRankedAccountsBodySchema.extend({
   count: z.coerce.number().int().min(1).max(100).default(80),
 });
+const deleteOldRawMatchesBodySchema = z.object({
+  olderThanDays: z.coerce.number().int().min(0).max(3650).default(30),
+}).partial().default({});
 
 export const jobsRouter = Router();
 
@@ -170,6 +175,35 @@ jobsRouter.post("/full-refresh", async (request, response) => {
       ok: true,
       summary: result.summary,
     });
+  } catch (error) {
+    return sendJobError(response, error);
+  }
+});
+
+jobsRouter.post("/compact-match-records", async (_request, response) => {
+  try {
+    const result = await compactMatchRecordsJob.run();
+    return response.status(200).json(result);
+  } catch (error) {
+    return sendJobError(response, error);
+  }
+});
+
+jobsRouter.post("/delete-old-raw-matches", async (request, response) => {
+  const parsed = deleteOldRawMatchesBodySchema.safeParse(request.body ?? {});
+  if (!parsed.success) {
+    return response.status(400).json({
+      ok: false,
+      error: "Invalid request body.",
+      details: parsed.error.flatten(),
+    });
+  }
+
+  try {
+    const result = await deleteOldRawMatchesJob.run({
+      olderThanDays: parsed.data.olderThanDays ?? 30,
+    });
+    return response.status(200).json(result);
   } catch (error) {
     return sendJobError(response, error);
   }

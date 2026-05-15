@@ -17,6 +17,9 @@ diagnosticsRouter.get("/", async (_request, response, next) => {
       lastErrors,
       rateLimitStatus,
       latestPatch,
+      dbSize,
+      payloadSizes,
+      matchLifecycleCounts,
     ] = await Promise.all([
       prisma.trackedAccount.count(),
       prisma.matchRecord.count(),
@@ -37,6 +40,9 @@ diagnosticsRouter.get("/", async (_request, response, next) => {
         orderBy: { startedAt: "desc" },
       }),
       getLatestPatchSafe(),
+      getDatabaseSizeDiagnostics(),
+      getMatchPayloadSizeDiagnostics(),
+      getMatchLifecycleDiagnostics(),
     ]);
 
     return response.json({
@@ -44,6 +50,9 @@ diagnosticsRouter.get("/", async (_request, response, next) => {
       backendOnline: true,
       riotApiAvailable: backendConfig.riotApiKey.trim().length > 0,
       latestPatch,
+      dbSize,
+      payloadSizes,
+      ...matchLifecycleCounts,
       trackedAccountsCount,
       matchRecordsCount,
       recommendationStatsCount,
@@ -82,6 +91,94 @@ async function getLatestPatchSafe() {
   } catch {
     return null;
   }
+}
+
+async function getMatchLifecycleDiagnostics() {
+  const [rawMatchesCount, analyzedMatchesCount, unanalyzedMatchesCount, compactedMatchesCount] =
+    await Promise.all([
+      prisma.matchRecord.count({
+        where: {
+          rawPayload: {
+            not: null,
+          },
+        },
+      }),
+      prisma.matchRecord.count({
+        where: {
+          analyzedAt: {
+            not: null,
+          },
+        },
+      }),
+      prisma.matchRecord.count({
+        where: {
+          analyzedAt: null,
+        },
+      }),
+      prisma.matchRecord.count({
+        where: {
+          compactedAt: {
+            not: null,
+          },
+        },
+      }),
+    ]);
+
+  return {
+    rawMatchesCount,
+    analyzedMatchesCount,
+    unanalyzedMatchesCount,
+    compactedMatchesCount,
+  };
+}
+
+async function getDatabaseSizeDiagnostics() {
+  const rows = await prisma.$queryRaw<Array<{
+    database_size_bytes: bigint;
+    match_record_total_bytes: bigint;
+    match_record_table_bytes: bigint;
+    match_record_indexes_bytes: bigint;
+  }>>`
+    SELECT
+      pg_database_size(current_database()) AS database_size_bytes,
+      pg_total_relation_size('"MatchRecord"') AS match_record_total_bytes,
+      pg_relation_size('"MatchRecord"') AS match_record_table_bytes,
+      pg_indexes_size('"MatchRecord"') AS match_record_indexes_bytes
+  `;
+  const row = rows[0];
+  return row
+    ? {
+        databaseSizeBytes: Number(row.database_size_bytes),
+        matchRecordTotalBytes: Number(row.match_record_total_bytes),
+        matchRecordTableBytes: Number(row.match_record_table_bytes),
+        matchRecordIndexesBytes: Number(row.match_record_indexes_bytes),
+      }
+    : null;
+}
+
+async function getMatchPayloadSizeDiagnostics() {
+  const rows = await prisma.$queryRaw<Array<{
+    records_with_raw_payload: bigint;
+    records_with_compact_payload: bigint;
+    raw_payload_bytes: bigint;
+    compact_payload_bytes: bigint;
+  }>>`
+    SELECT
+      COUNT(*) FILTER (WHERE "rawPayload" IS NOT NULL) AS records_with_raw_payload,
+      COUNT(*) FILTER (WHERE "compactPayload" IS NOT NULL) AS records_with_compact_payload,
+      COALESCE(SUM(octet_length("rawPayload")), 0) AS raw_payload_bytes,
+      COALESCE(SUM(octet_length("compactPayload")), 0) AS compact_payload_bytes
+    FROM "MatchRecord"
+  `;
+  const row = rows[0];
+  return row
+    ? {
+        recordsWithRawPayload: Number(row.records_with_raw_payload),
+        recordsWithCompactPayload: Number(row.records_with_compact_payload),
+        rawPayloadBytes: Number(row.raw_payload_bytes),
+        compactPayloadBytes: Number(row.compact_payload_bytes),
+      }
+    : null;
 }
 
 function parseMetadata(value: string | null) {

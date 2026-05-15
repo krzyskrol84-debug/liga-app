@@ -17,6 +17,7 @@ import { matchupsRouter } from "./routes/matchups.js";
 import { itemsRouter } from "./routes/items.js";
 import { trackedAccountsRouter } from "./routes/trackedAccounts.js";
 import { diagnosticsRouter } from "./routes/diagnostics.js";
+import { debugRouter } from "./routes/debug.js";
 import { versionRouter } from "./routes/version.js";
 import { statsScheduler } from "./jobs/StatsScheduler.js";
 
@@ -49,6 +50,7 @@ app.use("/api/matchups", matchupsRouter);
 app.use("/api/items", itemsRouter);
 app.use("/api/tracked-accounts", trackedAccountsRouter);
 app.use("/api/diagnostics", diagnosticsRouter);
+app.use("/api/debug", debugRouter);
 
 app.use(errorHandler);
 

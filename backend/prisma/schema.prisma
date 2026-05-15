@@ -120,7 +120,11 @@ model MatchRecord {
   assists         Int?
   durationSeconds Int?
   playedAt        DateTime?
-  rawPayload      String
+  rawPayload      String?
+  compactPayload  String?
+  payloadFormat   String   @default("full-json")
+  analyzedAt      DateTime?
+  compactedAt     DateTime?
   fetchedAt       DateTime @default(now())
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -130,6 +134,9 @@ model MatchRecord {
   @@index([puuid])
   @@index([patch])
   @@index([role])
+  @@index([payloadFormat])
+  @@index([analyzedAt])
+  @@index([compactedAt])
   @@index([patch, championId, role])
 }
 

@@ -8,6 +8,7 @@ import {
   type PlatformRegion,
   type RoutingRegion,
 } from "../riot/RiotApiClient.js";
+import { serializeCompactMatchPayload } from "../lib/matchPayload.js";
 
 const INSERT_BATCH_SIZE = 50;
 const FETCH_SUMMARY_INTERVAL = 50;
@@ -444,7 +445,10 @@ type MatchRecordInsertRow = {
   assists: number | null;
   durationSeconds: number | null;
   playedAt: Date | null;
-  rawPayload: string;
+  rawPayload: string | null;
+  compactPayload: string;
+  payloadFormat: string;
+  compactedAt: Date;
   fetchedAt: Date;
 };
 
@@ -467,7 +471,10 @@ function buildMatchRecordRow(
     assists: participant.assists ?? null,
     durationSeconds: match.info?.gameDuration ?? null,
     playedAt: extractPlayedAt(match),
-    rawPayload: JSON.stringify(match),
+    rawPayload: null,
+    compactPayload: serializeCompactMatchPayload(matchId, match),
+    payloadFormat: "compact-json-v1",
+    compactedAt: new Date(),
     fetchedAt: new Date(),
   };
 }
