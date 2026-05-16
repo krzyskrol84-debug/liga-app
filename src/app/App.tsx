@@ -61,6 +61,8 @@ type Recommendation = {
   gamesCount: number;
   patch: string;
   source?: "riot-api" | "local-json";
+  lowConfidence?: boolean;
+  confidenceScore?: "high" | "medium" | "low";
 };
 
 type LeagueClientStatus = {
@@ -252,6 +254,8 @@ type BackendRecommendationDto = {
   wins: number;
   patch: string;
   source: "riot-api";
+  lowConfidence: boolean;
+  confidenceScore: "high" | "medium" | "low";
 };
 
 type BackendItemOptionDto = {
@@ -261,6 +265,8 @@ type BackendItemOptionDto = {
   winRate: number;
   pickRate: number;
   patch: string;
+  lowConfidence: boolean;
+  confidenceScore: "high" | "medium" | "low";
 };
 
 type BackendItemsResponse = {
@@ -278,6 +284,8 @@ type BackendMatchupEntryDto = {
   winRate: number;
   difficulty: string;
   patch: string;
+  lowConfidence: boolean;
+  confidenceScore: "high" | "medium" | "low";
 };
 
 type BackendMatchupsResponse = {
@@ -562,9 +570,9 @@ export function App() {
   const recommendationSource = recommendation?.source ?? "local-json";
   const lastBackendRefreshAt = backendDiagnostics?.lastFullRefresh?.finishedAt ?? null;
   const sampleSizeWarning =
-    recommendation && recommendation.gamesCount > 0 && recommendation.gamesCount < 20
-      ? "Low sample size. Treat this build as directional only."
-      : recommendation && recommendation.gamesCount >= 20 && recommendation.gamesCount < 100
+    recommendation?.lowConfidence
+      ? "Low sample size"
+      : recommendation?.confidenceScore === "medium"
         ? "Small sample size. Confidence is still limited."
         : null;
 
@@ -3420,6 +3428,8 @@ function mergeBackendRecommendations(
       gamesCount: entry.gamesCount,
       patch: entry.patch,
       source: "riot-api",
+      lowConfidence: entry.lowConfidence,
+      confidenceScore: entry.confidenceScore,
     };
   });
 }

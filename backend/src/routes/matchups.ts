@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { getCachedAnalyticsValue, setCachedAnalyticsValue } from "../lib/analyticsCache.js";
 import { prisma } from "../lib/prisma.js";
+import { getConfidence, MIN_MATCHUP_GAMES, type ConfidenceScore } from "../lib/confidence.js";
 
 const roleSchema = z.enum(["top", "jungle", "middle", "bottom", "utility"]);
 
@@ -17,6 +18,8 @@ type MatchupEntry = {
   wins: number;
   difficulty: "favorable" | "even" | "hard" | "severe";
   patch: string;
+  lowConfidence: boolean;
+  confidenceScore: ConfidenceScore;
 };
 
 export const matchupsRouter = Router();
@@ -74,23 +77,18 @@ matchupsRouter.get("/", async (request, response, next) => {
       wins: row.wins,
       difficulty: classifyDifficulty(row.winRate),
       patch: row.patch,
+      ...getConfidence(row.gamesCount, MIN_MATCHUP_GAMES),
     }));
 
     const toughestMatchups = [...entries]
       .sort((left, right) => {
-        if (left.winRate !== right.winRate) {
-          return left.winRate - right.winRate;
-        }
-        return right.gamesCount - left.gamesCount;
+        return right.gamesCount - left.gamesCount || left.winRate - right.winRate;
       })
       .slice(0, 5);
 
     const bestMatchups = [...entries]
       .sort((left, right) => {
-        if (left.winRate !== right.winRate) {
-          return right.winRate - left.winRate;
-        }
-        return right.gamesCount - left.gamesCount;
+        return right.gamesCount - left.gamesCount || right.winRate - left.winRate;
       })
       .slice(0, 5);
 

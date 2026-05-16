@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { getCachedAnalyticsValue, setCachedAnalyticsValue } from "../lib/analyticsCache.js";
 import { prisma } from "../lib/prisma.js";
+import { getConfidence, MIN_ITEM_GAMES, type ConfidenceScore } from "../lib/confidence.js";
 
 const roleSchema = z.enum(["top", "jungle", "middle", "bottom", "utility"]);
 
@@ -17,6 +18,8 @@ type ItemOption = {
   wins: number;
   pickRate: number;
   patch: string;
+  lowConfidence: boolean;
+  confidenceScore: ConfidenceScore;
 };
 
 type NormalizedItemRow = ItemOption & {
@@ -86,6 +89,7 @@ itemsRouter.get("/", async (request, response) => {
       wins: row.wins,
       pickRate: row.pickRate ?? 0,
       patch: row.patch,
+      ...getConfidence(row.gamesCount ?? row.matches ?? 0, MIN_ITEM_GAMES),
     }))
     .filter((row) => row.itemIds.length > 0);
 
@@ -130,7 +134,7 @@ itemsRouter.get("/", async (request, response) => {
 function buildSection(rows: ItemOption[], _fallbackLabelPrefix: string): ItemOption[] {
   return rows
     .sort((left, right) => {
-      return right.gamesCount - left.gamesCount;
+      return right.gamesCount - left.gamesCount || right.winRate - left.winRate;
     })
     .map((row) => ({
       itemIds: row.itemIds,
@@ -139,6 +143,8 @@ function buildSection(rows: ItemOption[], _fallbackLabelPrefix: string): ItemOpt
       wins: row.wins,
       pickRate: row.pickRate,
       patch: row.patch,
+      lowConfidence: row.lowConfidence,
+      confidenceScore: row.confidenceScore,
     }));
 }
 

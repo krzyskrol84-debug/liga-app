@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { getCachedAnalyticsValue, setCachedAnalyticsValue } from "../lib/analyticsCache.js";
 import { prisma } from "../lib/prisma.js";
+import { getConfidence, MIN_ITEM_GAMES, MIN_RECOMMENDATION_GAMES } from "../lib/confidence.js";
 
 const roleSchema = z.enum(["top", "jungle", "middle", "bottom", "utility"]);
 
@@ -92,6 +93,7 @@ recommendationsRouter.get("/", async (request, response) => {
       gamesCount: row.gamesCount ?? row.matches ?? 0,
       wins: row.wins,
       winRate: row.winRate ?? 0,
+      ...getConfidence(row.gamesCount ?? row.matches ?? 0, MIN_ITEM_GAMES),
     });
     itemsByPatch.set(row.patch, current);
   }
@@ -111,6 +113,7 @@ recommendationsRouter.get("/", async (request, response) => {
     wins: row.wins,
     patch: row.patch,
     source: "riot-api" as const,
+    ...getConfidence(row.gamesCount, MIN_RECOMMENDATION_GAMES),
   }));
 
   setCachedAnalyticsValue(cacheKey, payload);
