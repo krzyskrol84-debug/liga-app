@@ -146,6 +146,9 @@ export class MatchAnalyzer {
   async analyzeGlobalStats(): Promise<AnalyzeGlobalStatsResult> {
     await assertNoRunningJob("analyze-global-stats");
     const startedAt = new Date();
+    logInfo("START ANALYZE", {
+      startedAt: startedAt.toISOString(),
+    });
     startAnalyzerJobStatus("analyze-global-stats");
     await setAnalyticsJobState({
       status: "running",
@@ -228,7 +231,7 @@ export class MatchAnalyzer {
         };
       }
 
-      const analysisRecordWhere = getAnalysisRecordWhere(latestPatch);
+      const analysisRecordWhere = getAnalysisRecordWhere();
       const totalRecords = await prisma.matchRecord.count({
         where: analysisRecordWhere,
       });
@@ -244,7 +247,7 @@ export class MatchAnalyzer {
       let cursorId: string | undefined;
       const pendingChunkAnalyses: Array<Promise<ChunkAnalysisResult>> = [];
 
-      logInfo("[analyzer] starting parallel analysis", {
+      logInfo("MATCH COUNT", {
         patch: latestPatch,
         totalRecords,
         chunkSize: RECORD_CHUNK_SIZE,
@@ -294,7 +297,7 @@ export class MatchAnalyzer {
           break;
         }
 
-        pendingChunkAnalyses.push(Promise.resolve().then(() => analyzeRecordChunk(records, latestPatch)));
+        pendingChunkAnalyses.push(Promise.resolve().then(() => analyzeRecordChunk(records)));
 
         cursorId = records.at(-1)?.id;
 
@@ -454,6 +457,11 @@ export class MatchAnalyzer {
           }),
         ]);
         statsInserted += result.count;
+        logInfo("SAVED TO DB", {
+          kind: "recommendation",
+          rowsAttempted: rows.length,
+          rowsInserted: result.count,
+        });
       }
 
       for (const rows of chunk(itemStatsRows, WRITE_BATCH_SIZE)) {
@@ -468,6 +476,11 @@ export class MatchAnalyzer {
           }),
         ]);
         statsInserted += result.count;
+        logInfo("SAVED TO DB", {
+          kind: "item",
+          rowsAttempted: rows.length,
+          rowsInserted: result.count,
+        });
       }
 
       for (const rows of chunk(matchupStatsRows, WRITE_BATCH_SIZE)) {
@@ -482,6 +495,11 @@ export class MatchAnalyzer {
           }),
         ]);
         statsInserted += result.count;
+        logInfo("SAVED TO DB", {
+          kind: "matchup",
+          rowsAttempted: rows.length,
+          rowsInserted: result.count,
+        });
       }
 
       logInfo("[db] saved analyzer stats", {
@@ -505,6 +523,14 @@ export class MatchAnalyzer {
           },
         });
       }
+
+      logInfo("ANALYZE COMPLETE", {
+        matchesAnalyzed: processedRecords,
+        recommendationStatsCount: recommendationStatsRows.length,
+        itemStatsCount: itemStatsRows.length,
+        matchupStatsCount: matchupStatsRows.length,
+        statsInserted,
+      });
 
       recommendationAggregates.clear();
       itemAggregates.clear();
@@ -568,6 +594,9 @@ export class MatchAnalyzer {
         matchupStatsCount: matchupStatsRows.length,
       };
     } catch (error) {
+      logInfo("ANALYZE ERROR", {
+        error: getSafeErrorMessage(error),
+      });
       const finishedAt = new Date();
       const failedStatus = failAnalyzerJobStatus();
       await prisma.fetchJobLog.update({
@@ -589,7 +618,6 @@ export class MatchAnalyzer {
   }
 
   async getAnalyzerSample(): Promise<AnalyzerSample> {
-    const latestPatch = await resolveLatestPatch();
     const [totalMatchRecords, analyzedMatchesCount, compactedMatchesCount, firstRecord] = await Promise.all([
       prisma.matchRecord.count(),
       prisma.matchRecord.count({
@@ -607,11 +635,7 @@ export class MatchAnalyzer {
         },
       }),
       prisma.matchRecord.findFirst({
-        ...(latestPatch
-          ? {
-              where: getAnalysisRecordWhere(latestPatch),
-            }
-          : {}),
+        where: getAnalysisRecordWhere(),
         orderBy: {
           createdAt: "asc",
         },
@@ -745,10 +769,7 @@ async function mergeChunkResultsAndSaveProgress(options: {
   return processedRecords;
 }
 
-function analyzeRecordChunk(
-  records: MatchRecordForAnalysis[],
-  latestPatch: string,
-): ChunkAnalysisResult {
+function analyzeRecordChunk(records: MatchRecordForAnalysis[]): ChunkAnalysisResult {
   const recommendationAggregates = new Map<string, RecommendationAggregate>();
   const itemAggregates = new Map<string, ItemAggregate>();
   const matchupAggregates = new Map<string, MatchupAggregate>();
@@ -764,11 +785,18 @@ function analyzeRecordChunk(
   for (const record of records) {
     const parsed = safeParseMatch(record.rawPayload, record.compactPayload);
     const participants = parsed?.info?.participants ?? [];
-    const patch = record.patch ?? extractPatchFromVersion(parsed?.info?.gameVersion);
+    const patch = record.patch ?? parsed?.patch ?? extractPatchFromVersion(parsed?.info?.gameVersion);
 
-    if (patch !== latestPatch || participants.length === 0) {
+    if (!patch || participants.length === 0) {
       continue;
     }
+
+    logInfo("PROCESSING MATCH", {
+      matchId: record.riotMatchId,
+      payloadType: record.compactPayload ? "compact" : "raw",
+      participants: participants.length,
+      patch,
+    });
 
     participantsRead += participants.length;
     const extractedParticipants = participants
@@ -786,11 +814,31 @@ function analyzeRecordChunk(
     for (const participant of extractedParticipants) {
       if (participant.recommendation) {
         accumulateRecommendationStats(recommendationAggregates, participant);
+        logInfo("GENERATED RECOMMENDATION", {
+          matchId: record.riotMatchId,
+          championId: participant.championId,
+          role: participant.role,
+        });
       }
       accumulateItemStats(itemAggregates, participant);
+      if (participant.itemSets.length > 0) {
+        logInfo("GENERATED ITEM STATS", {
+          matchId: record.riotMatchId,
+          championId: participant.championId,
+          role: participant.role,
+          itemSets: participant.itemSets.length,
+        });
+      }
     }
 
+    const matchupCountBefore = matchupAggregates.size;
     accumulateMatchups(matchupAggregates, extractedParticipants);
+    if (matchupAggregates.size > matchupCountBefore) {
+      logInfo("GENERATED MATCHUP", {
+        matchId: record.riotMatchId,
+        generatedGroups: matchupAggregates.size - matchupCountBefore,
+      });
+    }
 
     const currentParticipant = extractedParticipants[0];
     currentChampionId = currentParticipant.championId;
@@ -814,16 +862,11 @@ function analyzeRecordChunk(
   };
 }
 
-function getAnalysisRecordWhere(latestPatch: string) {
+function getAnalysisRecordWhere() {
   return {
-    OR: [
-      {
-        patch: latestPatch,
-      },
-      {
-        patch: null,
-      },
-    ],
+    compactPayload: {
+      not: null,
+    },
   };
 }
 
@@ -1353,7 +1396,10 @@ async function saveAnalyzerProgress(options: {
         options.recommendationStatsAdded +
         options.itemStatsAdded +
         options.matchupStatsAdded,
-      metadata: serializeAnalyzerJobStatus(status),
+      metadata: JSON.stringify({
+        jobStatus: status,
+        currentMatchId: options.currentMatchId,
+      }),
     },
   });
 
