@@ -57,13 +57,16 @@ type MatchupAggregate = {
 type ExtractedParticipant = {
   patch: string;
   championId: number;
-  teamId: number;
+  teamId: number | null;
+  opponentChampionId: number | null;
   role: NormalizedRole;
   win: boolean;
-  primaryStyleId: number;
-  subStyleId: number;
-  selectedPerkIds: number[];
-  summonerSpellIds: [number, number];
+  recommendation: {
+    primaryStyleId: number;
+    subStyleId: number;
+    selectedPerkIds: number[];
+    summonerSpellIds: [number, number];
+  } | null;
   itemSets: Array<{
     itemSetType: ItemSetType;
     itemIds: number[];
@@ -111,7 +114,9 @@ export type AnalyzeGlobalStatsResult = {
 
 export type AnalyzerSample = {
   totalMatchRecords: number;
-  firstMatchId: string | null;
+  analyzedMatchesCount: number;
+  compactedMatchesCount: number;
+  samplePayloadType: "raw" | "compact" | null;
   participantCount: number;
   sampleChampionId: number | null;
   sampleRole: NormalizedRole | null;
@@ -585,8 +590,22 @@ export class MatchAnalyzer {
 
   async getAnalyzerSample(): Promise<AnalyzerSample> {
     const latestPatch = await resolveLatestPatch();
-    const [totalMatchRecords, firstRecord] = await Promise.all([
+    const [totalMatchRecords, analyzedMatchesCount, compactedMatchesCount, firstRecord] = await Promise.all([
       prisma.matchRecord.count(),
+      prisma.matchRecord.count({
+        where: {
+          analyzedAt: {
+            not: null,
+          },
+        },
+      }),
+      prisma.matchRecord.count({
+        where: {
+          compactedAt: {
+            not: null,
+          },
+        },
+      }),
       prisma.matchRecord.findFirst({
         ...(latestPatch
           ? {
@@ -608,7 +627,9 @@ export class MatchAnalyzer {
     if (!firstRecord) {
       return {
         totalMatchRecords,
-        firstMatchId: null,
+        analyzedMatchesCount,
+        compactedMatchesCount,
+        samplePayloadType: null,
         participantCount: 0,
         sampleChampionId: null,
         sampleRole: null,
@@ -643,42 +664,33 @@ export class MatchAnalyzer {
     if (!patch) reasons.push("patch is missing.");
     if (participants.length === 0) reasons.push("info.participants is empty.");
     if (sampleParticipant && !sampleRole) reasons.push("sample participant has no supported role.");
-    if (sampleParticipant && sampleRunes.length === 0) reasons.push("sample participant has no runes.");
+    if (sampleParticipant && sampleRunes.length === 0) reasons.push("sample participant has no selected runes.");
     if (sampleParticipant && sampleItems.length === 0) reasons.push("sample participant has no completed items.");
     if (!sampleExtractedParticipant) reasons.push("sample participant cannot be fully extracted.");
+    if (sampleExtractedParticipant && !sampleExtractedParticipant.recommendation) {
+      reasons.push("sample participant lacks complete recommendation fields.");
+    }
     if (
       extractedParticipants.length > 0 &&
-      !extractedParticipants.some((participant) =>
-        extractedParticipants.some(
-          (candidate) =>
-            candidate.role === participant.role &&
-            candidate.teamId !== participant.teamId &&
-            candidate.championId !== participant.championId,
-        ),
-      )
+      !canBuildAnyMatchup(extractedParticipants)
     ) {
       reasons.push("sample match has no cross-team same-role pair for matchup stats.");
     }
 
     return {
       totalMatchRecords,
-      firstMatchId: firstRecord.riotMatchId,
+      analyzedMatchesCount,
+      compactedMatchesCount,
+      samplePayloadType: firstRecord.compactPayload ? "compact" : firstRecord.rawPayload ? "raw" : null,
       participantCount: participants.length,
       sampleChampionId: sampleParticipant?.championId ?? null,
       sampleRole,
       sampleWin: typeof sampleParticipant?.win === "boolean" ? sampleParticipant.win : null,
       sampleRunes,
       sampleItems,
-      canGenerateRecommendation: Boolean(sampleExtractedParticipant),
+      canGenerateRecommendation: Boolean(sampleExtractedParticipant?.recommendation),
       canGenerateItemStats: Boolean(sampleExtractedParticipant && sampleExtractedParticipant.itemSets.length > 0),
-      canGenerateMatchup: extractedParticipants.some((participant) =>
-        extractedParticipants.some(
-          (candidate) =>
-            candidate.role === participant.role &&
-            candidate.teamId !== participant.teamId &&
-            candidate.championId !== participant.championId,
-        ),
-      ),
+      canGenerateMatchup: canBuildAnyMatchup(extractedParticipants),
       reasonIfFalse: reasons.length > 0 ? reasons.join(" ") : null,
     };
   }
@@ -772,7 +784,9 @@ function analyzeRecordChunk(
     analyzedRecordIds.push(record.id);
 
     for (const participant of extractedParticipants) {
-      accumulateRecommendationStats(recommendationAggregates, participant);
+      if (participant.recommendation) {
+        accumulateRecommendationStats(recommendationAggregates, participant);
+      }
       accumulateItemStats(itemAggregates, participant);
     }
 
@@ -822,7 +836,8 @@ function extractParticipant(
   patch: string,
 ): ExtractedParticipant | null {
   const championId = participant.championId;
-  const teamId = participant.teamId;
+  const teamId = participant.teamId ?? null;
+  const opponentChampionId = participant.opponentChampionId ?? null;
   const role = normalizeParticipantRole(participant);
   const primaryStyleId = participant.perks?.styles?.[0]?.style;
   const subStyleId = participant.perks?.styles?.[1]?.style;
@@ -830,16 +845,7 @@ function extractParticipant(
   const summoner2Id = participant.summoner2Id;
   const selectedPerkIds = collectSelectedPerkIds(participant);
 
-  if (
-    !championId ||
-    !teamId ||
-    !role ||
-    !primaryStyleId ||
-    !subStyleId ||
-    !summoner1Id ||
-    !summoner2Id ||
-    selectedPerkIds.length === 0
-  ) {
+  if (!championId || !role) {
     return null;
   }
 
@@ -847,12 +853,22 @@ function extractParticipant(
     patch,
     championId,
     teamId,
+    opponentChampionId,
     role,
     win: Boolean(participant.win),
-    primaryStyleId,
-    subStyleId,
-    selectedPerkIds,
-    summonerSpellIds: normalizeSummonerSpellPair(summoner1Id, summoner2Id),
+    recommendation:
+      primaryStyleId &&
+      subStyleId &&
+      summoner1Id &&
+      summoner2Id &&
+      selectedPerkIds.length > 0
+        ? {
+            primaryStyleId,
+            subStyleId,
+            selectedPerkIds,
+            summonerSpellIds: normalizeSummonerSpellPair(summoner1Id, summoner2Id),
+          }
+        : null,
     itemSets: collectItemSets(participant),
   };
 }
@@ -969,24 +985,28 @@ function accumulateRecommendationStats(
   aggregates: Map<string, RecommendationAggregate>,
   participant: ExtractedParticipant,
 ) {
+  if (!participant.recommendation) {
+    return;
+  }
+
   const key = buildRecommendationAggregateKey({
     patch: participant.patch,
     championId: participant.championId,
     role: participant.role,
-    primaryStyleId: participant.primaryStyleId,
-    subStyleId: participant.subStyleId,
-    selectedPerkIds: participant.selectedPerkIds,
-    summonerSpellIds: participant.summonerSpellIds,
+    primaryStyleId: participant.recommendation.primaryStyleId,
+    subStyleId: participant.recommendation.subStyleId,
+    selectedPerkIds: participant.recommendation.selectedPerkIds,
+    summonerSpellIds: participant.recommendation.summonerSpellIds,
   });
 
   const current = aggregates.get(key) ?? {
     patch: participant.patch,
     championId: participant.championId,
     role: participant.role,
-    primaryStyleId: participant.primaryStyleId,
-    subStyleId: participant.subStyleId,
-    selectedPerkIds: participant.selectedPerkIds,
-    summonerSpellIds: participant.summonerSpellIds,
+    primaryStyleId: participant.recommendation.primaryStyleId,
+    subStyleId: participant.recommendation.subStyleId,
+    selectedPerkIds: participant.recommendation.selectedPerkIds,
+    summonerSpellIds: participant.recommendation.summonerSpellIds,
     gamesCount: 0,
     wins: 0,
   };
@@ -1035,9 +1055,27 @@ function accumulateMatchups(
   aggregates: Map<string, MatchupAggregate>,
   participants: ExtractedParticipant[],
 ) {
+  for (const participant of participants) {
+    if (!participant.opponentChampionId) {
+      continue;
+    }
+
+    incrementMatchupAggregate(aggregates, {
+      patch: participant.patch,
+      championId: participant.championId,
+      opponentChampionId: participant.opponentChampionId,
+      role: participant.role,
+      win: participant.win,
+    });
+  }
+
   const roleBuckets = new Map<NormalizedRole, ExtractedParticipant[]>();
 
   for (const participant of participants) {
+    if (participant.opponentChampionId || participant.teamId === null) {
+      continue;
+    }
+
     const bucket = roleBuckets.get(participant.role) ?? [];
     bucket.push(participant);
     roleBuckets.set(participant.role, bucket);
@@ -1059,30 +1097,58 @@ function accumulateMatchups(
         continue;
       }
 
-      const key = buildMatchupAggregateKey({
+      incrementMatchupAggregate(aggregates, {
         patch: participant.patch,
         championId: participant.championId,
         opponentChampionId: opponent.championId,
         role,
+        win: participant.win,
       });
-
-      const current = aggregates.get(key) ?? {
-        patch: participant.patch,
-        championId: participant.championId,
-        opponentChampionId: opponent.championId,
-        role,
-        gamesCount: 0,
-        wins: 0,
-      };
-
-      current.gamesCount += 1;
-      if (participant.win) {
-        current.wins += 1;
-      }
-
-      aggregates.set(key, current);
     }
   }
+}
+
+function canBuildAnyMatchup(participants: ExtractedParticipant[]) {
+  return participants.some(
+    (participant) =>
+      Boolean(participant.opponentChampionId) ||
+      participants.some(
+        (candidate) =>
+          participant.teamId !== null &&
+          candidate.teamId !== null &&
+          candidate.role === participant.role &&
+          candidate.teamId !== participant.teamId &&
+          candidate.championId !== participant.championId,
+      ),
+  );
+}
+
+function incrementMatchupAggregate(
+  aggregates: Map<string, MatchupAggregate>,
+  entry: {
+    patch: string;
+    championId: number;
+    opponentChampionId: number;
+    role: NormalizedRole;
+    win: boolean;
+  },
+) {
+  const key = buildMatchupAggregateKey(entry);
+  const current = aggregates.get(key) ?? {
+    patch: entry.patch,
+    championId: entry.championId,
+    opponentChampionId: entry.opponentChampionId,
+    role: entry.role,
+    gamesCount: 0,
+    wins: 0,
+  };
+
+  current.gamesCount += 1;
+  if (entry.win) {
+    current.wins += 1;
+  }
+
+  aggregates.set(key, current);
 }
 
 function mergeRecommendationAggregates(
