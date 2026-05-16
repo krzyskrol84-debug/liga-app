@@ -2,6 +2,7 @@ import { Router } from "express";
 import { backendConfig } from "../config.js";
 import { prisma } from "../lib/prisma.js";
 import { dataDragonService } from "../riot/DataDragonService.js";
+import { getAnalyticsJobState } from "../lib/analyticsJobState.js";
 
 export const diagnosticsRouter = Router();
 
@@ -20,6 +21,7 @@ diagnosticsRouter.get("/", async (_request, response, next) => {
       dbSize,
       payloadSizes,
       matchLifecycleCounts,
+      analyticsJobState,
     ] = await Promise.all([
       prisma.trackedAccount.count(),
       prisma.matchRecord.count(),
@@ -43,6 +45,7 @@ diagnosticsRouter.get("/", async (_request, response, next) => {
       getDatabaseSizeDiagnostics(),
       getMatchPayloadSizeDiagnostics(),
       getMatchLifecycleDiagnostics(),
+      getAnalyticsJobState(),
     ]);
 
     return response.json({
@@ -52,6 +55,10 @@ diagnosticsRouter.get("/", async (_request, response, next) => {
       latestPatch,
       dbSize,
       payloadSizes,
+      rawPayloadBytes: payloadSizes?.rawPayloadBytes ?? 0,
+      compactPayloadBytes: payloadSizes?.compactPayloadBytes ?? 0,
+      dbSizeBytes: dbSize?.databaseSizeBytes ?? null,
+      lastStatsUpdatedAt: analyticsJobState?.lastStatsUpdatedAt?.toISOString() ?? null,
       ...matchLifecycleCounts,
       trackedAccountsCount,
       matchRecordsCount,

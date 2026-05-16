@@ -3,7 +3,9 @@ import { prisma } from "./prisma.js";
 export type AnalyticsJobStage =
   | "seeding-accounts"
   | "fetching-matches"
+  | "compacting-matches"
   | "analyzing-stats"
+  | "cleaning-raw-payloads"
   | "completed"
   | "failed";
 

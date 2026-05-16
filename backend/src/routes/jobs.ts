@@ -11,6 +11,7 @@ import { ConcurrentJobError } from "../lib/jobGuards.js";
 import { getAnalyzerJobStatus } from "../lib/jobStatus.js";
 import { compactMatchRecordsJob } from "../jobs/CompactMatchRecordsJob.js";
 import { deleteOldRawMatchesJob } from "../jobs/DeleteOldRawMatchesJob.js";
+import { maintenanceJob, MaintenanceAlreadyRunningError } from "../jobs/MaintenanceJob.js";
 
 const platformRegionSchema = z.enum([
   "br1",
@@ -221,6 +222,14 @@ jobsRouter.post("/delete-old-raw-matches", async (request, response) => {
   }
 });
 
+jobsRouter.post("/run-maintenance", async (_request, response) => {
+  try {
+    return response.status(200).json(await maintenanceJob.run());
+  } catch (error) {
+    return sendJobError(response, error);
+  }
+});
+
 function sendJobError(
   response: import("express").Response,
   error: unknown,
@@ -242,6 +251,13 @@ function sendJobError(
   }
 
   if (error instanceof FullRefreshAlreadyRunningError) {
+    return response.status(409).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+
+  if (error instanceof MaintenanceAlreadyRunningError) {
     return response.status(409).json({
       ok: false,
       error: error.message,
