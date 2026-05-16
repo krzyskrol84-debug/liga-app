@@ -2,9 +2,17 @@ import { prisma } from "../lib/prisma.js";
 import { compactStoredPayload } from "../lib/matchPayload.js";
 import { logInfo } from "../lib/logger.js";
 import { assertNoRunningJob } from "../lib/jobGuards.js";
+import {
+  acquirePersistentJobLock,
+  clearJobCheckpoint,
+  getJobCheckpoint,
+  heartbeatPersistentJobLock,
+  releasePersistentJobLock,
+  saveJobCheckpoint,
+} from "../lib/jobRuntime.js";
 
-const DEFAULT_BATCH_SIZE = 250;
-const MIN_BATCH_SIZE = 100;
+const DEFAULT_BATCH_SIZE = 25;
+const MIN_BATCH_SIZE = 25;
 const MAX_BATCH_SIZE = 500;
 
 export type CompactMatchRecordsResult = {
@@ -17,8 +25,14 @@ export type CompactMatchRecordsResult = {
 };
 
 export class CompactMatchRecordsJob {
-  async run(batchSize = DEFAULT_BATCH_SIZE): Promise<CompactMatchRecordsResult> {
+  async run(
+    batchSize = DEFAULT_BATCH_SIZE,
+    options: { nested?: boolean; checkpointJobName?: string } = {},
+  ): Promise<CompactMatchRecordsResult> {
     await assertNoRunningJob("compact-match-records");
+    if (!options.nested) {
+      await acquirePersistentJobLock("compact-match-records");
+    }
     const normalizedBatchSize = normalizeBatchSize(batchSize);
     const startedAt = new Date();
     const jobLog = await prisma.fetchJobLog.create({
@@ -30,12 +44,16 @@ export class CompactMatchRecordsJob {
       },
     });
 
+    const checkpointJobName = options.checkpointJobName ?? "compact-match-records";
+    let completed = false;
     let recordsRead = 0;
     let recordsCompacted = 0;
     let recordsSkipped = 0;
     let rawBytesBefore = 0;
     let compactBytesAfter = 0;
-    let cursorId: string | undefined;
+    const checkpoint = await getJobCheckpoint();
+    let cursorId =
+      checkpoint?.jobName === checkpointJobName ? checkpoint.cursorId ?? undefined : undefined;
 
     try {
       while (true) {
@@ -104,6 +122,22 @@ export class CompactMatchRecordsJob {
           recordsCompacted,
           recordsSkipped,
         });
+        await saveJobCheckpoint({
+          jobName: checkpointJobName,
+          currentStage: "compacting-matches",
+          cursorId,
+          currentMatchId: records.at(-1)?.riotMatchId ?? null,
+          progress: 0,
+          metadata: {
+            recordsRead,
+            recordsCompacted,
+            recordsSkipped,
+          },
+        });
+        await heartbeatPersistentJobLock({
+          currentStage: "compacting-matches",
+          cursorId,
+        });
       }
 
       const finishedAt = new Date();
@@ -124,6 +158,7 @@ export class CompactMatchRecordsJob {
         },
       });
 
+      completed = true;
       return {
         ok: true,
         recordsRead,
@@ -142,7 +177,15 @@ export class CompactMatchRecordsJob {
           errorMessage: getSafeErrorMessage(error),
         },
       });
+      if (!options.nested) {
+        await releasePersistentJobLock();
+      }
       throw error;
+    } finally {
+      if (!options.nested && completed) {
+        await clearJobCheckpoint();
+        await releasePersistentJobLock();
+      }
     }
   }
 }

@@ -758,7 +758,7 @@ export class RiotApiClient {
   }
 }
 
-const RETRYABLE_STATUS_CODES = new Set([500, 502, 503, 504]);
+const RETRYABLE_STATUS_CODES = new Set([401, 500, 502, 503, 504]);
 
 function buildRoutingBaseUrl(region: RoutingRegion): string {
   return `https://${region}.api.riotgames.com`;

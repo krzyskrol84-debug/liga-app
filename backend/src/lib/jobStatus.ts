@@ -1,6 +1,7 @@
 import { prisma } from "./prisma.js";
 import { RiotApiClient } from "../riot/RiotApiClient.js";
 import { getAnalyticsJobState } from "./analyticsJobState.js";
+import { getJobCheckpoint, getPersistentJobLock, parseJobMetadata } from "./jobRuntime.js";
 
 export type AnalyzerJobStatus = {
   running: boolean;
@@ -22,6 +23,10 @@ export type AnalyzerJobStatus = {
   retryCount: number;
   eta: number | null;
   errorMessage: string | null;
+  currentMemoryUsageMB: number;
+  lastCheckpoint: unknown;
+  activeJobRuntimeSeconds: number | null;
+  restartCount: number;
 };
 
 type AnalyzerJobProgressPatch = Partial<Omit<AnalyzerJobStatus, "running" | "currentJob">>;
@@ -46,6 +51,10 @@ const idleStatus: AnalyzerJobStatus = {
   retryCount: 0,
   eta: null,
   errorMessage: null,
+  currentMemoryUsageMB: 0,
+  lastCheckpoint: null,
+  activeJobRuntimeSeconds: null,
+  restartCount: 0,
 };
 
 let currentStatus: AnalyzerJobStatus = { ...idleStatus };
@@ -218,7 +227,7 @@ export function parseStatusMetadata(metadata: string | null): Partial<AnalyzerJo
 
 async function getBackendJobMetrics() {
   const riotMetrics = RiotApiClient.getMetrics();
-  const [pending, processing, recentCompleted] = await Promise.all([
+  const [pending, processing, recentCompleted, checkpoint, lock] = await Promise.all([
     prisma.riotMatchFetchQueue.count({ where: { status: "pending" } }),
     prisma.riotMatchFetchQueue.count({ where: { status: "processing" } }),
     prisma.riotMatchFetchQueue.count({
@@ -229,6 +238,8 @@ async function getBackendJobMetrics() {
         },
       },
     }),
+    getJobCheckpoint(),
+    getPersistentJobLock(),
   ]);
 
   const queueSize = pending + processing;
@@ -241,6 +252,22 @@ async function getBackendJobMetrics() {
     currentConcurrency: riotMetrics.currentConcurrency,
     retryCount: riotMetrics.retryCount,
     eta: matchesPerMinute > 0 ? Math.ceil(queueSize / matchesPerMinute) : null,
+    currentMemoryUsageMB: Number((process.memoryUsage().rss / 1024 / 1024).toFixed(1)),
+    lastCheckpoint: checkpoint
+      ? {
+          jobName: checkpoint.jobName,
+          currentStage: checkpoint.currentStage,
+          currentAccount: checkpoint.currentAccountId,
+          currentMatch: checkpoint.currentMatchId,
+          progress: checkpoint.progress,
+          metadata: parseJobMetadata(checkpoint.metadata),
+          updatedAt: checkpoint.updatedAt.toISOString(),
+        }
+      : null,
+    activeJobRuntimeSeconds: lock
+      ? Math.max(0, Math.floor((Date.now() - lock.acquiredAt.getTime()) / 1000))
+      : null,
+    restartCount: checkpoint?.restartCount ?? 0,
   };
 }
 

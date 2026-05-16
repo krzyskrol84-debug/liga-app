@@ -222,3 +222,34 @@ model FetchJobLog {
   @@index([jobName, startedAt])
   @@index([status, startedAt])
 }
+
+model JobLock {
+  id          String   @id
+  jobName     String
+  ownerId     String
+  acquiredAt  DateTime @default(now())
+  heartbeatAt DateTime @default(now())
+  metadata    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([jobName])
+  @@index([heartbeatAt])
+}
+
+model JobCheckpoint {
+  id               String   @id
+  jobName          String
+  currentStage     String?
+  currentAccountId String?
+  currentMatchId   String?
+  cursorId         String?
+  progress         Int      @default(0)
+  restartCount     Int      @default(0)
+  metadata         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([jobName])
+  @@index([updatedAt])
+}

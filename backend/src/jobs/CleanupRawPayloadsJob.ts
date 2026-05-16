@@ -7,7 +7,7 @@ export type CleanupRawPayloadsResult = {
 };
 
 export class CleanupRawPayloadsJob {
-  async run(): Promise<CleanupRawPayloadsResult> {
+  async run(_options: { nested?: boolean } = {}): Promise<CleanupRawPayloadsResult> {
     await assertNoRunningJob("cleanup-raw-payloads");
     const startedAt = new Date();
     const jobLog = await prisma.fetchJobLog.create({

@@ -1,8 +1,18 @@
 import { backendConfig } from "../config.js";
 import { prisma } from "../lib/prisma.js";
 import { logInfo, logWarn } from "../lib/logger.js";
-import { getAnalyticsJobState, setAnalyticsJobState } from "../lib/analyticsJobState.js";
+import {
+  getAnalyticsJobState,
+  setAnalyticsJobState,
+  type AnalyticsJobStage,
+} from "../lib/analyticsJobState.js";
 import { fullRefreshJob, FullRefreshAlreadyRunningError, type FullRefreshJobInput } from "./FullRefreshJob.js";
+import {
+  getJobCheckpoint,
+  getPersistentJobLock,
+  incrementJobRestartCount,
+} from "../lib/jobRuntime.js";
+import { maintenanceJob } from "./MaintenanceJob.js";
 
 const schedulerInput: FullRefreshJobInput = {
   platformRegion: "eun1",
@@ -135,16 +145,21 @@ export class StatsScheduler {
   }
 
   private async startWorker() {
-    const shouldRunImmediately = await this.recoverInterruptedJobs();
-    const initialDelayMs = shouldRunImmediately ? 5_000 : 15_000;
+    const resumeJobName = await this.recoverInterruptedJobs();
+    const initialDelayMs = resumeJobName ? 5_000 : 15_000;
 
     setTimeout(() => {
+      if (resumeJobName) {
+        void this.resumeInterruptedJob(resumeJobName);
+        return;
+      }
       void this.runTick();
     }, initialDelayMs).unref();
   }
 
   private async recoverInterruptedJobs() {
     const persistentState = await getAnalyticsJobState();
+    const persistentLock = await getPersistentJobLock();
     const interruptedJobs = await prisma.fetchJobLog.findMany({
       where: {
         status: "running",
@@ -166,13 +181,14 @@ export class StatsScheduler {
       },
     });
 
-    if (interruptedJobs.length === 0 && persistentState?.status !== "running") {
-      return false;
+    if (interruptedJobs.length === 0 && persistentState?.status !== "running" && !persistentLock) {
+      return null;
     }
 
     this.recoveredInterruptedRun = true;
     const recoveredAt = new Date();
 
+    await incrementJobRestartCount();
     for (const job of interruptedJobs) {
       await prisma.fetchJobLog.update({
         where: {
@@ -182,12 +198,12 @@ export class StatsScheduler {
           status: "failed",
           finishedAt: recoveredAt,
           durationMs: recoveredAt.getTime() - job.startedAt.getTime(),
-          errorMessage: "Job interrupted by backend restart; scheduler will restart analytics cycle.",
+          errorMessage: "Job interrupted by backend restart; scheduler will resume from checkpoint.",
           metadata: JSON.stringify({
             previousMetadata: parseMetadata(job.metadata),
             interruptedByRestart: true,
             recoveredAt: recoveredAt.toISOString(),
-            restartAction: "restart-analytics-cycle",
+            restartAction: "resume-from-checkpoint",
           }),
         },
       });
@@ -196,15 +212,15 @@ export class StatsScheduler {
     logWarn("[scheduler] recovered interrupted analytics jobs", {
       count: interruptedJobs.length,
       persistentStateWasRunning: persistentState?.status === "running",
-      restartAction: "restart-analytics-cycle",
+      restartAction: "resume-from-checkpoint",
     });
 
     await setAnalyticsJobState({
-      status: "failed",
-      currentStage: "failed",
-      currentJob: "scheduler.full-refresh",
-      errorMessage: "Analytics job interrupted by backend restart; scheduler will restart analytics cycle.",
-      finishedAt: recoveredAt,
+      status: "running",
+      currentStage: (persistentState?.currentStage as AnalyticsJobStage | undefined) ?? "fetching-matches",
+      currentJob: persistentLock?.jobName ?? persistentState?.currentJob ?? "scheduler.full-refresh",
+      errorMessage: null,
+      finishedAt: null,
       metadata: {
         interruptedJobs: interruptedJobs.map((job) => ({
           jobName: job.jobName,
@@ -218,11 +234,34 @@ export class StatsScheduler {
               progress: persistentState.progress,
             }
           : null,
-        restartAction: "restart-analytics-cycle",
+        restartAction: "resume-from-checkpoint",
       },
     });
 
-    return true;
+    return persistentLock?.jobName ?? persistentState?.currentJob ?? "full-refresh";
+  }
+
+  private async resumeInterruptedJob(jobName: string) {
+    const checkpoint = await getJobCheckpoint();
+    logInfo("[scheduler] resuming interrupted job", {
+      jobName,
+      checkpointStage: checkpoint?.currentStage ?? null,
+      checkpointProgress: checkpoint?.progress ?? null,
+    });
+
+    try {
+      if (jobName === "maintenance") {
+        await maintenanceJob.run();
+        return;
+      }
+
+      await fullRefreshJob.run(schedulerInput);
+    } catch (error) {
+      logWarn("[scheduler] resume failed", {
+        jobName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   private async updateSchedulerLog(

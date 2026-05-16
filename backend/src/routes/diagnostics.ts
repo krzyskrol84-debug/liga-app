@@ -3,6 +3,7 @@ import { backendConfig } from "../config.js";
 import { prisma } from "../lib/prisma.js";
 import { dataDragonService } from "../riot/DataDragonService.js";
 import { getAnalyticsJobState } from "../lib/analyticsJobState.js";
+import { getJobCheckpoint, getPersistentJobLock, parseJobMetadata } from "../lib/jobRuntime.js";
 
 export const diagnosticsRouter = Router();
 
@@ -22,6 +23,8 @@ diagnosticsRouter.get("/", async (_request, response, next) => {
       payloadSizes,
       matchLifecycleCounts,
       analyticsJobState,
+      jobCheckpoint,
+      jobLock,
     ] = await Promise.all([
       prisma.trackedAccount.count(),
       prisma.matchRecord.count(),
@@ -46,6 +49,8 @@ diagnosticsRouter.get("/", async (_request, response, next) => {
       getMatchPayloadSizeDiagnostics(),
       getMatchLifecycleDiagnostics(),
       getAnalyticsJobState(),
+      getJobCheckpoint(),
+      getPersistentJobLock(),
     ]);
 
     return response.json({
@@ -59,6 +64,22 @@ diagnosticsRouter.get("/", async (_request, response, next) => {
       compactPayloadBytes: payloadSizes?.compactPayloadBytes ?? 0,
       dbSizeBytes: dbSize?.databaseSizeBytes ?? null,
       lastStatsUpdatedAt: analyticsJobState?.lastStatsUpdatedAt?.toISOString() ?? null,
+      currentMemoryUsageMB: Number((process.memoryUsage().rss / 1024 / 1024).toFixed(1)),
+      lastCheckpoint: jobCheckpoint
+        ? {
+            jobName: jobCheckpoint.jobName,
+            currentStage: jobCheckpoint.currentStage,
+            currentAccount: jobCheckpoint.currentAccountId,
+            currentMatch: jobCheckpoint.currentMatchId,
+            progress: jobCheckpoint.progress,
+            metadata: parseJobMetadata(jobCheckpoint.metadata),
+            updatedAt: jobCheckpoint.updatedAt.toISOString(),
+          }
+        : null,
+      activeJobRuntimeSeconds: jobLock
+        ? Math.max(0, Math.floor((Date.now() - jobLock.acquiredAt.getTime()) / 1000))
+        : null,
+      restartCount: jobCheckpoint?.restartCount ?? 0,
       ...matchLifecycleCounts,
       trackedAccountsCount,
       matchRecordsCount,

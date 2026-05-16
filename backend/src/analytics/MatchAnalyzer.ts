@@ -13,8 +13,15 @@ import {
 import { markAnalyticsJobFailed, setAnalyticsJobState } from "../lib/analyticsJobState.js";
 import { dataDragonService } from "../riot/DataDragonService.js";
 import { parseStoredMatchPayload, type StoredParticipant } from "../lib/matchPayload.js";
+import {
+  acquirePersistentJobLock,
+  clearJobCheckpoint,
+  heartbeatPersistentJobLock,
+  releasePersistentJobLock,
+  saveJobCheckpoint,
+} from "../lib/jobRuntime.js";
 
-const RECORD_CHUNK_SIZE = 750;
+const RECORD_CHUNK_SIZE = 25;
 const WRITE_BATCH_SIZE = 250;
 
 type SupportedRole = "TOP" | "JUNGLE" | "MIDDLE" | "BOTTOM" | "UTILITY";
@@ -143,8 +150,13 @@ export class MatchAnalyzer {
     };
   }
 
-  async analyzeGlobalStats(): Promise<AnalyzeGlobalStatsResult> {
+  async analyzeGlobalStats(options: { nested?: boolean; checkpointJobName?: string } = {}): Promise<AnalyzeGlobalStatsResult> {
     await assertNoRunningJob("analyze-global-stats");
+    if (!options.nested) {
+      await acquirePersistentJobLock("analyze-global-stats");
+    }
+    const checkpointJobName = options.checkpointJobName ?? "analyze-global-stats";
+    let completed = false;
     const startedAt = new Date();
     logInfo("START ANALYZE", {
       startedAt: startedAt.toISOString(),
@@ -222,6 +234,7 @@ export class MatchAnalyzer {
           finishedAt: new Date(),
           lastStatsUpdatedAt: new Date(),
         });
+        completed = true;
         return {
           ok: true,
           matchesAnalyzed: 0,
@@ -317,6 +330,21 @@ export class MatchAnalyzer {
           participantsRead += results.reduce((sum, result) => sum + result.participantsRead, 0);
           participantsSkipped += results.reduce((sum, result) => sum + result.participantsSkipped, 0);
           analyzedRecordIds.push(...results.flatMap((result) => result.analyzedRecordIds));
+          await saveJobCheckpoint({
+            jobName: checkpointJobName,
+            currentStage: "analyzing-stats",
+            currentMatchId: results.at(-1)?.currentMatchId ?? null,
+            cursorId,
+            progress: calculateProgress(processedRecords, totalRecords),
+            metadata: {
+              processedRecords,
+              totalRecords,
+            },
+          });
+          await heartbeatPersistentJobLock({
+            currentStage: "analyzing-stats",
+            currentMatchId: results.at(-1)?.currentMatchId ?? null,
+          });
         }
       }
 
@@ -336,6 +364,17 @@ export class MatchAnalyzer {
         participantsRead += results.reduce((sum, result) => sum + result.participantsRead, 0);
         participantsSkipped += results.reduce((sum, result) => sum + result.participantsSkipped, 0);
         analyzedRecordIds.push(...results.flatMap((result) => result.analyzedRecordIds));
+        await saveJobCheckpoint({
+          jobName: checkpointJobName,
+          currentStage: "analyzing-stats",
+          currentMatchId: results.at(-1)?.currentMatchId ?? null,
+          cursorId,
+          progress: calculateProgress(processedRecords, totalRecords),
+          metadata: {
+            processedRecords,
+            totalRecords,
+          },
+        });
       }
 
       const source = "riot-api";
@@ -586,6 +625,7 @@ export class MatchAnalyzer {
         },
       });
 
+      completed = true;
       return {
         ok: true,
         matchesAnalyzed: processedRecords,
@@ -613,7 +653,15 @@ export class MatchAnalyzer {
         currentJob: "analyze-global-stats",
       });
       clearAnalyticsCache();
+      if (!options.nested) {
+        await releasePersistentJobLock();
+      }
       throw error;
+    } finally {
+      if (!options.nested && completed) {
+        await clearJobCheckpoint();
+        await releasePersistentJobLock();
+      }
     }
   }
 

@@ -21,6 +21,7 @@ import { debugRouter } from "./routes/debug.js";
 import { analyzeDebugRouter } from "./routes/analyzeDebug.js";
 import { versionRouter } from "./routes/version.js";
 import { statsScheduler } from "./jobs/StatsScheduler.js";
+import { getJobCheckpoint, saveJobCheckpoint } from "./lib/jobRuntime.js";
 
 const app = express();
 
@@ -121,6 +122,21 @@ async function gracefulShutdown(signal: string) {
   shuttingDown = true;
   logInfo("Graceful shutdown started.", { signal });
   statsScheduler.stop();
+  const checkpoint = await getJobCheckpoint();
+  if (checkpoint) {
+    await saveJobCheckpoint({
+      jobName: checkpoint.jobName,
+      currentStage: checkpoint.currentStage,
+      currentAccountId: checkpoint.currentAccountId,
+      currentMatchId: checkpoint.currentMatchId,
+      cursorId: checkpoint.cursorId,
+      progress: checkpoint.progress,
+      metadata: {
+        gracefulShutdown: true,
+        signal,
+      },
+    });
+  }
 
   if (!server) {
     await prisma.$disconnect();

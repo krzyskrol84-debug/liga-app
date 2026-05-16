@@ -7,6 +7,13 @@ import { cleanupRawPayloadsJob } from "./CleanupRawPayloadsJob.js";
 import type { PlatformRegion, RoutingRegion } from "../riot/RiotApiClient.js";
 import { markAnalyticsJobFailed, setAnalyticsJobState } from "../lib/analyticsJobState.js";
 import { logInfo } from "../lib/logger.js";
+import {
+  acquirePersistentJobLock,
+  clearJobCheckpoint,
+  heartbeatPersistentJobLock,
+  releasePersistentJobLock,
+  saveJobCheckpoint,
+} from "../lib/jobRuntime.js";
 
 export type FullRefreshJobInput = {
   platformRegion: PlatformRegion;
@@ -45,6 +52,8 @@ export class FullRefreshJob {
     pipelineLogId: string;
   }> {
     await assertNoRunningFullRefresh();
+    await acquirePersistentJobLock("full-refresh");
+    let completed = false;
 
     const startedAt = new Date();
     const pipelineLog = await prisma.fetchJobLog.create({
@@ -89,6 +98,11 @@ export class FullRefreshJob {
           count: input.count,
         },
       });
+      await saveJobCheckpoint({
+        jobName: "full-refresh",
+        currentStage: "seeding-accounts",
+        progress: 0,
+      });
       await this.updatePipelineProgress(pipelineLog.id, startedAt, {
         stage: "seed-ranked-accounts",
         progress: 10,
@@ -119,10 +133,17 @@ export class FullRefreshJob {
           failedSeedAccounts: seedResult.failedAccounts,
         },
       });
+      await heartbeatPersistentJobLock({ currentStage: "fetching-matches" });
+      await saveJobCheckpoint({
+        jobName: "full-refresh",
+        currentStage: "fetching-matches",
+        progress: 35,
+      });
       const updateStatsResult = await updateStatsJob.run({
         count: input.count,
         bypassCooldown: true,
         analyzeAfterFetch: false,
+        nested: true,
       });
       logPipelineStage("update-stats", {
         fetchedMatches: updateStatsResult.fetchedMatches,
@@ -140,7 +161,16 @@ export class FullRefreshJob {
         progress: 60,
         processedMatches: updateStatsResult.fetchedMatches,
       });
-      const compactResult = await compactMatchRecordsJob.run();
+      await heartbeatPersistentJobLock({ currentStage: "compacting-matches" });
+      await saveJobCheckpoint({
+        jobName: "full-refresh",
+        currentStage: "compacting-matches",
+        progress: 60,
+      });
+      const compactResult = await compactMatchRecordsJob.run(25, {
+        nested: true,
+        checkpointJobName: "full-refresh",
+      });
       logPipelineStage("compact-match-records", {
         fetchedMatches: updateStatsResult.fetchedMatches,
         compactedMatches: compactResult.recordsCompacted,
@@ -165,7 +195,16 @@ export class FullRefreshJob {
           skippedMatches: updateStatsResult.skippedMatches,
         },
       });
-      const analyzeGlobalStatsResult = await matchAnalyzer.analyzeGlobalStats();
+      await heartbeatPersistentJobLock({ currentStage: "analyzing-stats" });
+      await saveJobCheckpoint({
+        jobName: "full-refresh",
+        currentStage: "analyzing-stats",
+        progress: 70,
+      });
+      const analyzeGlobalStatsResult = await matchAnalyzer.analyzeGlobalStats({
+        nested: true,
+        checkpointJobName: "full-refresh",
+      });
       logPipelineStage("analyze-global-stats", {
         fetchedMatches: updateStatsResult.fetchedMatches,
         compactedMatches: compactResult.recordsCompacted,
@@ -185,7 +224,13 @@ export class FullRefreshJob {
         progress: 90,
         processedMatches: analyzeGlobalStatsResult.matchesAnalyzed,
       });
-      const cleanupResult = await cleanupRawPayloadsJob.run();
+      await heartbeatPersistentJobLock({ currentStage: "cleaning-raw-payloads" });
+      await saveJobCheckpoint({
+        jobName: "full-refresh",
+        currentStage: "cleaning-raw-payloads",
+        progress: 90,
+      });
+      const cleanupResult = await cleanupRawPayloadsJob.run({ nested: true });
       const dbSizeBytes = await getDatabaseSizeBytes();
       logPipelineStage("cleanup-raw-payloads", {
         fetchedMatches: updateStatsResult.fetchedMatches,
@@ -245,6 +290,7 @@ export class FullRefreshJob {
         metadata: summary,
       });
 
+      completed = true;
       return {
         ok: true,
         summary,
@@ -265,7 +311,13 @@ export class FullRefreshJob {
           errorMessage: error instanceof Error ? error.message : "Unknown full-refresh error",
         },
       });
+      await releasePersistentJobLock();
       throw error;
+    } finally {
+      if (completed) {
+        await clearJobCheckpoint();
+        await releasePersistentJobLock();
+      }
     }
   }
 

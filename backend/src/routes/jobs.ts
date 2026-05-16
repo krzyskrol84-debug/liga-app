@@ -12,6 +12,7 @@ import { getAnalyzerJobStatus } from "../lib/jobStatus.js";
 import { compactMatchRecordsJob } from "../jobs/CompactMatchRecordsJob.js";
 import { deleteOldRawMatchesJob } from "../jobs/DeleteOldRawMatchesJob.js";
 import { maintenanceJob, MaintenanceAlreadyRunningError } from "../jobs/MaintenanceJob.js";
+import { PersistentJobLockError } from "../lib/jobRuntime.js";
 
 const platformRegionSchema = z.enum([
   "br1",
@@ -65,7 +66,7 @@ const deleteOldRawMatchesBodySchema = z.object({
   olderThanDays: z.coerce.number().int().min(0).max(3650).default(30),
 }).partial().default({});
 const compactMatchRecordsBodySchema = z.object({
-  batchSize: z.coerce.number().int().min(100).max(500).default(250),
+  batchSize: z.coerce.number().int().min(25).max(500).default(25),
 }).partial().default({});
 
 export const jobsRouter = Router();
@@ -195,7 +196,7 @@ jobsRouter.post("/compact-match-records", async (request, response) => {
   }
 
   try {
-    const result = await compactMatchRecordsJob.run(parsed.data.batchSize ?? 250);
+    const result = await compactMatchRecordsJob.run(parsed.data.batchSize ?? 25);
     return response.status(200).json(result);
   } catch (error) {
     return sendJobError(response, error);
@@ -265,6 +266,13 @@ function sendJobError(
   }
 
   if (error instanceof ConcurrentJobError) {
+    return response.status(409).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+
+  if (error instanceof PersistentJobLockError) {
     return response.status(409).json({
       ok: false,
       error: error.message,

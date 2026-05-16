@@ -6,12 +6,20 @@ import { RiotApiError } from "../riot/RiotApiClient.js";
 import { backendConfig } from "../config.js";
 import { markAnalyticsJobFailed, setAnalyticsJobState } from "../lib/analyticsJobState.js";
 import { logInfo } from "../lib/logger.js";
+import {
+  acquirePersistentJobLock,
+  clearJobCheckpoint,
+  releasePersistentJobLock,
+  getJobCheckpoint,
+  parseJobMetadata,
+  saveJobCheckpoint,
+} from "../lib/jobRuntime.js";
 
 const JOB_COOLDOWN_MS = 60_000;
 const BETWEEN_ACCOUNTS_DELAY_MS = 750;
 const PROGRESS_SAVE_INTERVAL = 50;
 const MATCH_LIST_WORKERS = 2;
-const RETRYABLE_ACCOUNT_ERROR_STATUSES = new Set([429, 500, 502, 503, 504]);
+const RETRYABLE_ACCOUNT_ERROR_STATUSES = new Set([401, 429, 500, 502, 503, 504]);
 
 export class UpdateStatsCooldownError extends Error {
   public readonly retryAfterSeconds: number;
@@ -27,6 +35,7 @@ export type UpdateStatsJobInput = {
   count?: number;
   bypassCooldown?: boolean;
   analyzeAfterFetch?: boolean;
+  nested?: boolean;
 };
 
 export type UpdateStatsJobResult = {
@@ -49,6 +58,10 @@ export class UpdateStatsJob {
 
   async run(input: UpdateStatsJobInput = {}): Promise<UpdateStatsJobResult> {
     await assertNoRunningJob("update-stats");
+    if (!input.nested) {
+      await acquirePersistentJobLock("update-stats");
+    }
+    let completed = false;
     if (!input.bypassCooldown) {
       await assertJobCooldown();
     }
@@ -92,14 +105,22 @@ export class UpdateStatsJob {
       const trackedAccounts = (await prisma.trackedAccount.findMany({
         orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
       })).sort(compareTrackedAccountPriority);
+      const checkpoint = await getJobCheckpoint();
+      const checkpointMetadata =
+        checkpoint?.jobName === "update-stats"
+          ? readCheckpointMetadata(checkpoint.metadata)
+          : null;
 
-      let accountsProcessed = 0;
-      let accountsVisited = 0;
-      let fetchedMatches = 0;
+      let accountsProcessed = checkpointMetadata?.accountsProcessed ?? 0;
+      let accountsVisited = checkpointMetadata?.accountsVisited ?? 0;
+      let fetchedMatches = checkpointMetadata?.fetchedMatches ?? 0;
       let skippedMatches = 0;
       let failedAccounts = 0;
       let retryScheduledAccounts = 0;
-      let accountIndex = 0;
+      let accountIndex = resolveResumeAccountIndex(
+        trackedAccounts,
+        checkpoint?.jobName === "update-stats" ? checkpoint.currentAccountId : null,
+      );
 
       const processNextAccount = async () => {
         while (accountIndex < trackedAccounts.length) {
@@ -176,6 +197,7 @@ export class UpdateStatsJob {
               skippedMatches,
               failedAccounts,
               retryScheduledAccounts,
+              currentAccountId: trackedAccount.id,
             });
           }
         }
@@ -193,6 +215,7 @@ export class UpdateStatsJob {
         skippedMatches,
         failedAccounts,
         retryScheduledAccounts,
+        currentAccountId: null,
       });
 
       if (analyzeAfterFetch) {
@@ -238,6 +261,7 @@ export class UpdateStatsJob {
         },
       });
 
+      completed = true;
       return {
         ok: true,
         accountsProcessed,
@@ -267,7 +291,15 @@ export class UpdateStatsJob {
           errorMessage: getSafeErrorMessage(error),
         },
       });
+      if (!input.nested) {
+        await releasePersistentJobLock();
+      }
       throw error;
+    } finally {
+      if (!input.nested && completed) {
+        await clearJobCheckpoint();
+        await releasePersistentJobLock();
+      }
     }
   }
 }
@@ -352,6 +384,7 @@ async function saveUpdateStatsProgress(options: {
   skippedMatches: number;
   failedAccounts: number;
   retryScheduledAccounts: number;
+  currentAccountId: string | null;
 }) {
   await prisma.fetchJobLog.update({
     where: {
@@ -392,6 +425,19 @@ async function saveUpdateStatsProgress(options: {
       retryScheduledAccounts: options.retryScheduledAccounts,
     },
   });
+
+  await saveJobCheckpoint({
+    jobName: "update-stats",
+    currentStage: "fetching-matches",
+    currentAccountId: options.currentAccountId,
+    progress: calculateProgress(options.accountsVisited, options.totalAccounts),
+    metadata: {
+      accountsVisited: options.accountsVisited,
+      totalAccounts: options.totalAccounts,
+      accountsProcessed: options.accountsProcessed,
+      fetchedMatches: options.fetchedMatches,
+    },
+  });
 }
 
 function calculateProgress(processed: number, total: number) {
@@ -428,4 +474,34 @@ function rankedTierPriority(tier: string | null) {
     default:
       return 50;
   }
+}
+
+function readCheckpointMetadata(metadata: string | null) {
+  const parsed = parseJobMetadata(metadata);
+  if (!parsed || typeof parsed !== "object") {
+    return null;
+  }
+
+  const record = parsed as Record<string, unknown>;
+  return {
+    accountsVisited: readNumber(record.accountsVisited),
+    accountsProcessed: readNumber(record.accountsProcessed),
+    fetchedMatches: readNumber(record.fetchedMatches),
+  };
+}
+
+function resolveResumeAccountIndex(
+  trackedAccounts: Array<{ id: string }>,
+  currentAccountId: string | null,
+) {
+  if (!currentAccountId) {
+    return 0;
+  }
+
+  const currentIndex = trackedAccounts.findIndex((account) => account.id === currentAccountId);
+  return currentIndex >= 0 ? currentIndex + 1 : 0;
+}
+
+function readNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }

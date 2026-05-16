@@ -4,6 +4,13 @@ import { markAnalyticsJobFailed, setAnalyticsJobState } from "../lib/analyticsJo
 import { compactMatchRecordsJob } from "./CompactMatchRecordsJob.js";
 import { cleanupRawPayloadsJob } from "./CleanupRawPayloadsJob.js";
 import { logInfo } from "../lib/logger.js";
+import {
+  acquirePersistentJobLock,
+  clearJobCheckpoint,
+  heartbeatPersistentJobLock,
+  releasePersistentJobLock,
+  saveJobCheckpoint,
+} from "../lib/jobRuntime.js";
 
 export type MaintenanceSummary = {
   compactedMatches: number;
@@ -23,6 +30,8 @@ export class MaintenanceAlreadyRunningError extends Error {
 export class MaintenanceJob {
   async run(): Promise<{ ok: true; summary: MaintenanceSummary }> {
     await assertNoRunningMaintenance();
+    await acquirePersistentJobLock("maintenance");
+    let completed = false;
     const startedAt = new Date();
     const pipelineLog = await prisma.fetchJobLog.create({
       data: {
@@ -41,7 +50,15 @@ export class MaintenanceJob {
         progress: 10,
         startedAt,
       });
-      const compactResult = await compactMatchRecordsJob.run();
+      await saveJobCheckpoint({
+        jobName: "maintenance",
+        currentStage: "compacting-matches",
+        progress: 10,
+      });
+      const compactResult = await compactMatchRecordsJob.run(25, {
+        nested: true,
+        checkpointJobName: "maintenance",
+      });
       logMaintenanceStage("compact-match-records", {
         compactedMatches: compactResult.recordsCompacted,
       });
@@ -52,7 +69,16 @@ export class MaintenanceJob {
         currentJob: "maintenance",
         progress: 45,
       });
-      const analyzeResult = await matchAnalyzer.analyzeGlobalStats();
+      await heartbeatPersistentJobLock({ currentStage: "analyzing-stats" });
+      await saveJobCheckpoint({
+        jobName: "maintenance",
+        currentStage: "analyzing-stats",
+        progress: 45,
+      });
+      const analyzeResult = await matchAnalyzer.analyzeGlobalStats({
+        nested: true,
+        checkpointJobName: "maintenance",
+      });
       logMaintenanceStage("analyze-global-stats", {
         compactedMatches: compactResult.recordsCompacted,
         analyzedMatches: analyzeResult.matchesAnalyzed,
@@ -64,7 +90,13 @@ export class MaintenanceJob {
         currentJob: "maintenance",
         progress: 80,
       });
-      const cleanupResult = await cleanupRawPayloadsJob.run();
+      await heartbeatPersistentJobLock({ currentStage: "cleaning-raw-payloads" });
+      await saveJobCheckpoint({
+        jobName: "maintenance",
+        currentStage: "cleaning-raw-payloads",
+        progress: 80,
+      });
+      const cleanupResult = await cleanupRawPayloadsJob.run({ nested: true });
       const dbSizeBytes = await getDatabaseSizeBytes();
       logMaintenanceStage("cleanup-raw-payloads", {
         compactedMatches: compactResult.recordsCompacted,
@@ -105,6 +137,7 @@ export class MaintenanceJob {
         metadata: summary,
       });
 
+      completed = true;
       return { ok: true, summary };
     } catch (error) {
       await markAnalyticsJobFailed(error, {
@@ -119,7 +152,13 @@ export class MaintenanceJob {
           errorMessage: error instanceof Error ? error.message : String(error),
         },
       });
+      await releasePersistentJobLock();
       throw error;
+    } finally {
+      if (completed) {
+        await clearJobCheckpoint();
+        await releasePersistentJobLock();
+      }
     }
   }
 }
